@@ -58,6 +58,22 @@ login_unknown189 = ProtoField.bytes("everquest.login.unknown189", "Unknown")
 login_zoning = ProtoField.bool("everquest.login.zoning", "Zoning")
 login_unknown193 = ProtoField.bytes("everquest.login.unknown193", "Unknown")
 
+rpserver_fv = ProtoField.bool("everquest.rpserver.fv", "FV rules")
+rpserver_pvp = ProtoField.bool("everquest.rpserver.pvp", "PVP")
+rpserver_auto_identify = ProtoField.bool("everquest.rpserver.auto_identify", "Auto Identify")
+rpserver_namegen = ProtoField.bool("everquest.rpserver.namegen", "Name Gen")
+rpserver_gibberish = ProtoField.bool("everquest.rpserver.gibberish", "Gibberish")
+rpserver_testserver = ProtoField.bool("everquest.rpserver.testserver", "Test Server")
+rpserver_locale = ProtoField.uint32("everquest.rpserver.locale", "Locale")
+rpserver_profanity_filter = ProtoField.bool("everquest.rpserver.profanity_filter", "Profanity Filter")
+rpserver_worldshortname = ProtoField.string("everquest.rpserver.worldshortname", "World Shortname")
+rpserver_loggingserverpassword = ProtoField.string("everquest.rpserver.loggingserver_password", "Logging Server Password")
+rpserver_loggingserveraddress = ProtoField.string("everquest.rpserver.loggingserver_address", "Logging Server Address")
+rpserver_loggingserverport = ProtoField.uint32("everquest.rpserver.loggingserver_port", "Logging Server Port")
+rpserver_localizedemailaddress = ProtoField.string("everquest.rpserver.localized_email", "Localized Email Address")
+rpserver_unknown1 = ProtoField.bytes("everquest.rpserver.unknown1", "Unknown")
+rpserver_unknown2 = ProtoField.bytes("everquest.rpserver.unknown2", "Unknown")
+
 eq_protocol.fields = {
   flags, flag_unknown_bit_0, flag_has_ack_request, flag_is_closing, flag_is_fragment, flag_has_ack_counter,
   flag_is_first_packet, flag_is_closing_2, flag_is_sequence_end, flag_is_keep_alive_ack, flag_unknown_bit_9,
@@ -65,10 +81,14 @@ eq_protocol.fields = {
   header_sequence_number, header_ack_response, header_ack_request, header_fragment_sequence, header_fragment_current,
   header_fragment_total, header_ack_counter_high, header_ack_counter_low, opcode, payload, crc,
   motd_message, login_accountname, login_password, login_unknown189, login_zoning, login_unknown193,
+  rpserver_fv, rpserver_pvp, rpserver_auto_identify, rpserver_namegen, rpserver_gibberish, rpserver_testserver,
+  rpserver_locale, rpserver_profanity_filter, rpserver_worldshortname, rpserver_loggingserverpassword,
+  rpserver_loggingserveraddress, rpserver_loggingserverport, rpserver_localizedemailaddress, rpserver_unknown1,
+  rpserver_unknown2,
 }
 
 function eq_protocol.dissector(buffer, pinfo, tree)
-  length = buffer:len()
+  local length = buffer:len()
   if length == 0 then return end
 
   pinfo.cols.protocol = eq_protocol.name
@@ -192,30 +212,60 @@ function add_payload(subtree, buffer, opcode_data)
   end
 end
 
+local function add_string(tree, field, buffer)
+  local s = buffer:string()
+  local len = #s
+  tree:add(field, buffer(0, len), s)
+
+  -- Returns the length in case the next string is offset by it
+  return len
+end
+local function add_uint_le(tree, field, buffer)
+  -- For little endian uints (seems like this is the "standard")
+  tree:add(field, buffer, buffer:le_uint())
+end
+
 local udp_port = DissectorTable.get("udp.port")
 udp_port:add(5998, eq_protocol)
 udp_port:add(9000, eq_protocol)
 
 OPCODE_TABLE = {
   -- Opcodes with dissect handlers
+  [0x5818] = {
+    name ="MSG_LOGIN",
+    dissect = function(tree, buffer)
+      local password_offset = 1 + add_string(tree, login_accountname, buffer(0, 127))
+      add_string(tree, login_password, buffer(password_offset, 15))
+
+      tree:add(login_unknown189, buffer(151, 41))
+      tree:add(login_zoning, buffer(192, 1))
+      tree:add(login_unknown193, buffer(193, 3))
+    end
+  },
+  [0xc341] = {
+    name ="MSG_RPSERVER",
+    dissect = function(tree, buffer)
+      tree:add(rpserver_fv, buffer(0, 4))
+      tree:add(rpserver_pvp, buffer(4, 4))
+      tree:add(rpserver_auto_identify, buffer(8, 4))
+      tree:add(rpserver_namegen, buffer(12, 4))
+      tree:add(rpserver_gibberish, buffer(16, 4))
+      tree:add(rpserver_testserver, buffer(20, 4))
+      add_uint_le(tree, rpserver_locale, buffer(24, 4))
+      tree:add(rpserver_profanity_filter, buffer(28, 4))
+      add_string(tree, rpserver_worldshortname, buffer(32, 32))
+      add_string(tree, rpserver_loggingserverpassword, buffer(64, 32))
+      tree:add(rpserver_unknown1, buffer(96, 16))
+      add_string(tree, rpserver_loggingserveraddress, buffer(112, 16))
+      tree:add(rpserver_unknown2, buffer(126, 48))
+      add_uint_le(tree, rpserver_loggingserverport, buffer(176, 4))
+      add_string(tree, rpserver_localizedemailaddress, buffer(180, 64))
+    end
+  },
   [0xdd41] = {
     name ="MSG_MOTD",
     dissect = function(subtree, buffer)
       subtree:add(motd_message, buffer)
-    end
-  },
-  [0x5818] = {
-    name ="MSG_LOGIN",
-    dissect = function(subtree, buffer)
-      accountname = buffer(0, 127):string()
-      password_offset = 1 + #accountname
-      password = buffer(password_offset, 15):string()
-
-      subtree:add(login_accountname, buffer(0, password_offset), accountname)
-      subtree:add(login_password, buffer(password_offset, 1 + #password))
-      subtree:add(login_unknown189, buffer(151, 41))
-      subtree:add(login_zoning, buffer(192, 1))
-      subtree:add(login_unknown193, buffer(193, 3))
     end
   },
 
@@ -1539,9 +1589,6 @@ OPCODE_TABLE = {
   },
   [0x9b40] = {
     name ="MSG_RM_SWITCH",
-  },
-  [0xc341] = {
-    name ="MSG_RPSERVER",
   },
   [0x1f40] = {
     name ="MSG_RUN",
