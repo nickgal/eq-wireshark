@@ -209,9 +209,10 @@ OPCODE_TABLE = {
     dissect = function(subtree, buffer)
       accountname = buffer(0, 127):string()
       password_offset = 1 + #accountname
+      password = buffer(password_offset, 15):string()
 
       subtree:add(login_accountname, buffer(0, password_offset), accountname)
-      subtree:add(login_password, buffer(password_offset, 15))
+      subtree:add(login_password, buffer(password_offset, 1 + #password))
       subtree:add(login_unknown189, buffer(151, 41))
       subtree:add(login_zoning, buffer(192, 1))
       subtree:add(login_unknown193, buffer(193, 3))
