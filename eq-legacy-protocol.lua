@@ -74,6 +74,9 @@ rpserver_localizedemailaddress = ProtoField.string("everquest.rpserver.localized
 rpserver_unknown1 = ProtoField.bytes("everquest.rpserver.unknown1", "Unknown")
 rpserver_unknown2 = ProtoField.bytes("everquest.rpserver.unknown2", "Unknown")
 
+accessgranted_response = ProtoField.bool("everquest.access_granted.response", "Response")
+accessgranted_name = ProtoField.string("everquest.access_granted.name", "Name")
+
 eq_protocol.fields = {
   flags, flag_unknown_bit_0, flag_has_ack_request, flag_is_closing, flag_is_fragment, flag_has_ack_counter,
   flag_is_first_packet, flag_is_closing_2, flag_is_sequence_end, flag_is_keep_alive_ack, flag_unknown_bit_9,
@@ -84,7 +87,7 @@ eq_protocol.fields = {
   rpserver_fv, rpserver_pvp, rpserver_auto_identify, rpserver_namegen, rpserver_gibberish, rpserver_testserver,
   rpserver_locale, rpserver_profanity_filter, rpserver_worldshortname, rpserver_loggingserverpassword,
   rpserver_loggingserveraddress, rpserver_loggingserverport, rpserver_localizedemailaddress, rpserver_unknown1,
-  rpserver_unknown2,
+  rpserver_unknown2, accessgranted_response, accessgranted_name,
 }
 
 function eq_protocol.dissector(buffer, pinfo, tree)
@@ -231,6 +234,13 @@ udp_port:add(9000, eq_protocol)
 
 OPCODE_TABLE = {
   -- Opcodes with dissect handlers
+  [0x0710] = {
+    name ="MSG_ACCESS_GRANTED",
+    dissect = function(tree, buffer)
+      tree:add(accessgranted_response, buffer(0, 1))
+      add_string(tree, accessgranted_name, buffer(1, 64))
+    end
+  },
   [0x5818] = {
     name ="MSG_LOGIN",
     dissect = function(tree, buffer)
@@ -272,9 +282,6 @@ OPCODE_TABLE = {
   -- Opcodes without handlers
   [0xbf41] = {
     name ="MSG_ABILITY_CHANGE",
-  },
-  [0x0710] = {
-    name ="MSG_ACCESS_GRANTED",
   },
   [0x2470] = {
     name ="MSG_ACCOUNT_INUSE",
