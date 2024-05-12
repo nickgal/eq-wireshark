@@ -52,6 +52,7 @@ payload =  ProtoField.bytes("everquest.payload", "Payload")
 crc = ProtoField.uint32("everquest.crc", "CRC32", base.HEX)
 
 motd_message =  ProtoField.string("everquest.motd.message", "Message")
+selectcharacter_name =  ProtoField.string("everquest.select_character.name", "Character Name")
 login_accountname = ProtoField.string("everquest.login.accountname", "Account Name")
 login_password = ProtoField.string("everquest.login.password", "Password")
 login_unknown189 = ProtoField.bytes("everquest.login.unknown189", "Unknown")
@@ -83,7 +84,7 @@ eq_protocol.fields = {
   flag_has_ack_response, flag_unknown_bit_11, flag_unknown_bit_12, flag_unknown_bit_13, flag_unknown_bit_14, flag_unknown_bit_15,
   header_sequence_number, header_ack_response, header_ack_request, header_fragment_sequence, header_fragment_current,
   header_fragment_total, header_ack_counter_high, header_ack_counter_low, opcode, payload, crc,
-  motd_message, login_accountname, login_password, login_unknown189, login_zoning, login_unknown193,
+  motd_message, selectcharacter_name, login_accountname, login_password, login_unknown189, login_zoning, login_unknown193,
   rpserver_fv, rpserver_pvp, rpserver_auto_identify, rpserver_namegen, rpserver_gibberish, rpserver_testserver,
   rpserver_locale, rpserver_profanity_filter, rpserver_worldshortname, rpserver_loggingserverpassword,
   rpserver_loggingserveraddress, rpserver_loggingserverport, rpserver_localizedemailaddress, rpserver_unknown1,
@@ -227,6 +228,11 @@ local function add_uint_le(tree, field, buffer)
   -- For little endian uints (seems like this is the "standard")
   tree:add(field, buffer, buffer:le_uint())
 end
+local function dissect_string(field)
+  return function(tree, buffer)
+    add_string(tree, field, buffer)
+  end
+end
 
 local udp_port = DissectorTable.get("udp.port")
 udp_port:add(5998, eq_protocol)
@@ -234,6 +240,10 @@ udp_port:add(9000, eq_protocol)
 
 OPCODE_TABLE = {
   -- Opcodes with dissect handlers
+  [0x0180] = {
+    name ="MSG_SELECT_CHARACTER",
+    dissect = dissect_string(selectcharacter_name),
+  },
   [0x0710] = {
     name ="MSG_ACCESS_GRANTED",
     dissect = function(tree, buffer)
@@ -274,9 +284,7 @@ OPCODE_TABLE = {
   },
   [0xdd41] = {
     name ="MSG_MOTD",
-    dissect = function(subtree, buffer)
-      subtree:add(motd_message, buffer)
-    end
+    dissect = dissect_string(motd_message),
   },
 
   -- Opcodes without handlers
@@ -1671,9 +1679,6 @@ OPCODE_TABLE = {
   },
   [0x5141] = {
     name ="MSG_SECONDARY_TOGGLE",
-  },
-  [0x0180] = {
-    name ="MSG_SELECT_CHARACTER",
   },
   [0x0a20] = {
     name ="MSG_SENDCORPSE_EQ",
