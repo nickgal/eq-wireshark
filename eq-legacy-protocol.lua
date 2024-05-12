@@ -78,6 +78,8 @@ rpserver_unknown2 = ProtoField.bytes("everquest.rpserver.unknown2", "Unknown")
 accessgranted_response = ProtoField.bool("everquest.access_granted.response", "Response")
 accessgranted_name = ProtoField.string("everquest.access_granted.name", "Name")
 
+expansion_expansions = ProtoField.uint32("everquest.expansions.expansions", "Expansions")
+
 eq_protocol.fields = {
   flags, flag_unknown_bit_0, flag_has_ack_request, flag_is_closing, flag_is_fragment, flag_has_ack_counter,
   flag_is_first_packet, flag_is_closing_2, flag_is_sequence_end, flag_is_keep_alive_ack, flag_unknown_bit_9,
@@ -88,7 +90,7 @@ eq_protocol.fields = {
   rpserver_fv, rpserver_pvp, rpserver_auto_identify, rpserver_namegen, rpserver_gibberish, rpserver_testserver,
   rpserver_locale, rpserver_profanity_filter, rpserver_worldshortname, rpserver_loggingserverpassword,
   rpserver_loggingserveraddress, rpserver_loggingserverport, rpserver_localizedemailaddress, rpserver_unknown1,
-  rpserver_unknown2, accessgranted_response, accessgranted_name,
+  rpserver_unknown2, accessgranted_response, accessgranted_name, expansion_expansions
 }
 
 function eq_protocol.dissector(buffer, pinfo, tree)
@@ -224,10 +226,6 @@ local function add_string(tree, field, buffer)
   -- Returns the length in case the next string is offset by it
   return len
 end
-local function add_uint_le(tree, field, buffer)
-  -- For little endian uints (seems like this is the "standard")
-  tree:add(field, buffer, buffer:le_uint())
-end
 local function dissect_string(field)
   return function(tree, buffer)
     add_string(tree, field, buffer)
@@ -271,15 +269,21 @@ OPCODE_TABLE = {
       tree:add(rpserver_namegen, buffer(12, 4))
       tree:add(rpserver_gibberish, buffer(16, 4))
       tree:add(rpserver_testserver, buffer(20, 4))
-      add_uint_le(tree, rpserver_locale, buffer(24, 4))
+      tree:add_le(rpserver_locale, buffer(24, 4))
       tree:add(rpserver_profanity_filter, buffer(28, 4))
       add_string(tree, rpserver_worldshortname, buffer(32, 32))
       add_string(tree, rpserver_loggingserverpassword, buffer(64, 32))
       tree:add(rpserver_unknown1, buffer(96, 16))
       add_string(tree, rpserver_loggingserveraddress, buffer(112, 16))
       tree:add(rpserver_unknown2, buffer(126, 48))
-      add_uint_le(tree, rpserver_loggingserverport, buffer(176, 4))
+      tree:add_le(rpserver_loggingserverport, buffer(176, 4))
       add_string(tree, rpserver_localizedemailaddress, buffer(180, 64))
+    end
+  },
+  [0xd841] = {
+    name ="MSG_KUNARK",
+    dissect = function(tree, buffer)
+      tree:add_le(expansion_expansions, buffer(0, 4))
     end
   },
   [0xdd41] = {
@@ -1040,9 +1044,6 @@ OPCODE_TABLE = {
   },
   [0x6c40] = {
     name ="MSG_KILL_PLAYER",
-  },
-  [0xd841] = {
-    name ="MSG_KUNARK",
   },
   [0x6e41] = {
     name ="MSG_LAST_NAME",
