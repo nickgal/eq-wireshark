@@ -19,7 +19,9 @@ Flags = {
   UnknownBit15 = 0x8000
 }
 
-flags = ProtoField.new("Flags", "everquest.flags", ftypes.UINT16, nil, base.HEX)
+reassembled_label = ProtoField.bytes("everquest.reassembled", "EQ Protocol Data (Reassembled)")
+fragment_label = ProtoField.bytes("everquest.fragment", "EQ Protocol Data Fragment")
+flags_label = ProtoField.new("Flags", "everquest.flags", ftypes.UINT16, nil, base.HEX)
 
 flag_unknown_bit_0 = ProtoField.bool("everquest.flags.unknown_bit_0", "UnknownBit0", 16, nil, Flags.UnknownBit0)
 flag_has_ack_request = ProtoField.bool("everquest.flags.has_ack_request", "HasAckRequest", 16, nil, Flags.HasAckRequest)
@@ -47,8 +49,8 @@ header_fragment_total = ProtoField.uint16("everquest.header.fragment_total", "Fr
 header_ack_counter_high = ProtoField.uint8("everquest.header.ack_counter_high", "AckCounterHigh", base.HEX)
 header_ack_counter_low = ProtoField.uint8("everquest.header.ack_counter_low", "AckCounterLow", base.HEX)
 
-opcode =  ProtoField.uint16("everquest.opcode", "OpCode", base.HEX)
-payload =  ProtoField.bytes("everquest.payload", "Payload")
+opcode = ProtoField.uint16("everquest.opcode", "OpCode", base.HEX)
+payload = ProtoField.bytes("everquest.payload", "Payload")
 crc = ProtoField.uint32("everquest.crc", "CRC32", base.HEX)
 
 motd_message =  ProtoField.string("everquest.motd.message", "Message")
@@ -81,7 +83,7 @@ accessgranted_name = ProtoField.string("everquest.access_granted.name", "Name")
 expansion_expansions = ProtoField.uint32("everquest.expansions.expansions", "Expansions")
 
 eq_protocol.fields = {
-  flags, flag_unknown_bit_0, flag_has_ack_request, flag_is_closing, flag_is_fragment, flag_has_ack_counter,
+  reassembled_label, fragment_label, flags_label, flag_unknown_bit_0, flag_has_ack_request, flag_is_closing, flag_is_fragment, flag_has_ack_counter,
   flag_is_first_packet, flag_is_closing_2, flag_is_sequence_end, flag_is_keep_alive_ack, flag_unknown_bit_9,
   flag_has_ack_response, flag_unknown_bit_11, flag_unknown_bit_12, flag_unknown_bit_13, flag_unknown_bit_14, flag_unknown_bit_15,
   header_sequence_number, header_ack_response, header_ack_request, header_fragment_sequence, header_fragment_current,
@@ -93,21 +95,37 @@ eq_protocol.fields = {
   rpserver_unknown2, accessgranted_response, accessgranted_name, expansion_expansions
 }
 
-function eq_protocol.dissector(buffer, pinfo, tree)
-  local length = buffer:len()
-  if length == 0 then return end
+function eq_protocol.init()
+  -- Initialize global fragment table
+  MsgFragments = {}
+end
 
-  pinfo.cols.protocol = eq_protocol.name
-
-  local subtree = tree:add(eq_protocol, buffer(), "EQ Protocol Data")
-
-  local crc_length = 4
-
+function dissect_metadata(tree, buffer)
   local flags_length = 2
-  local flags_buffer = buffer(0,flags_length)
+  local flags_buffer = buffer(0, flags_length)
   local flags_value = flags_buffer:le_uint()
-  local flag_tree = subtree:add(flags, flags_buffer)
+  local flags = {
+    unknown_bit_0     = bit.band(flags_value, Flags.UnknownBit0) ~= 0,
+    has_ack_request   = bit.band(flags_value, Flags.HasAckRequest) ~= 0,
+    is_closing        = bit.band(flags_value, Flags.IsClosing) ~= 0,
+    is_fragment       = bit.band(flags_value, Flags.IsFragment) ~= 0,
+    has_ack_counter   = bit.band(flags_value, Flags.HasAckCounter) ~= 0,
+    is_first_packet   = bit.band(flags_value, Flags.IsFirstPacket) ~= 0,
+    is_closing_2      = bit.band(flags_value, Flags.IsClosing2) ~= 0,
+    is_sequence_end   = bit.band(flags_value, Flags.IsSequenceEnd) ~= 0,
+    is_keep_alive_ack = bit.band(flags_value, Flags.IsKeepAliveAck) ~= 0,
+    unknown_bit_9     = bit.band(flags_value, Flags.UnknownBit9) ~= 0,
+    has_ack_response  = bit.band(flags_value, Flags.HasAckResponse) ~= 0,
+    unknown_bit_11    = bit.band(flags_value, Flags.UnknownBit11) ~= 0,
+    unknown_bit_12    = bit.band(flags_value, Flags.UnknownBit12) ~= 0,
+    unknown_bit_13    = bit.band(flags_value, Flags.UnknownBit13) ~= 0,
+    unknown_bit_14    = bit.band(flags_value, Flags.UnknownBit14) ~= 0,
+    unknown_bit_15    = bit.band(flags_value, Flags.UnknownBit15) ~= 0,
+  }
+  local fragment = nil
 
+  -- Flag dissector data
+  local flag_tree = tree:add(flags_label, flags_buffer)
   flag_tree:add_le(flag_unknown_bit_0, flags_buffer)
   flag_tree:add_le(flag_has_ack_request, flags_buffer)
   flag_tree:add_le(flag_is_closing, flags_buffer)
@@ -125,93 +143,201 @@ function eq_protocol.dissector(buffer, pinfo, tree)
   flag_tree:add_le(flag_unknown_bit_14, flags_buffer)
   flag_tree:add_le(flag_unknown_bit_15, flags_buffer)
 
-  local unknown_bit_0 = bit.band(flags_value, Flags.UnknownBit0) ~= 0
-  local has_ack_request = bit.band(flags_value, Flags.HasAckRequest) ~= 0
-  local is_closing = bit.band(flags_value, Flags.IsClosing) ~= 0
-  local is_fragment = bit.band(flags_value, Flags.IsFragment) ~= 0
-  local has_ack_counter = bit.band(flags_value, Flags.HasAckCounter) ~= 0
-  local is_first_packet = bit.band(flags_value, Flags.IsFirstPacket) ~= 0
-  local is_closing_2 = bit.band(flags_value, Flags.IsClosing2) ~= 0
-  local is_sequence_end = bit.band(flags_value, Flags.IsSequenceEnd) ~= 0
-  local is_keep_alive_ack = bit.band(flags_value, Flags.IsKeepAliveAck) ~= 0
-  local unknown_bit_9 = bit.band(flags_value, Flags.UnknownBit9) ~= 0
-  local has_ack_response = bit.band(flags_value, Flags.HasAckResponse) ~= 0
-  local unknown_bit_11 = bit.band(flags_value, Flags.UnknownBit11) ~= 0
-  local unknown_bit_12 = bit.band(flags_value, Flags.UnknownBit12) ~= 0
-  local unknown_bit_13 = bit.band(flags_value, Flags.UnknownBit13) ~= 0
-  local unknown_bit_14 = bit.band(flags_value, Flags.UnknownBit14) ~= 0
-  local unknown_bit_15 = bit.band(flags_value, Flags.UnknownBit15) ~= 0
-
-  local has_opcode = true
-
   local header_offset = flags_length
-
-  local header_tree = subtree:add(eq_protocol, buffer(header_offset), "[Header]")
+  local header_tree = tree:add(eq_protocol, buffer(header_offset), "[Header]")
 
   header_tree:add(header_sequence_number, buffer(header_offset, 2))
   header_offset = header_offset + 2
 
-  if has_ack_response then
+  if flags.has_ack_response then
     header_tree:add(header_ack_response, buffer(header_offset, 2))
     header_offset = header_offset + 2
   end
-
-  if has_ack_request then
+  if flags.has_ack_request then
     header_tree:add(header_ack_request, buffer(header_offset, 2))
     header_offset = header_offset + 2
   end
-
-
-  if is_fragment then
-    header_tree:add(header_fragment_sequence, buffer(header_offset, 2))
+  local has_opcode = true
+  if flags.is_fragment then
+    local seq = buffer(header_offset, 2)
+    header_tree:add(header_fragment_sequence, seq)
     header_offset = header_offset + 2;
 
-    header_tree:add(header_fragment_current, buffer(header_offset, 2))
-    -- only the first fragment has an opcode
-    has_opcode = buffer(header_offset, 2):int() == 0
+    local cur = buffer(header_offset, 2)
+    header_tree:add(header_fragment_current, cur)
     header_offset = header_offset + 2;
 
-    header_tree:add(header_fragment_total, buffer(header_offset, 2))
+    -- The first fragment has an opcode
+    has_opcode = cur:uint() == 0
+
+    local total = buffer(header_offset, 2)
+    header_tree:add(header_fragment_total, total)
     header_offset = header_offset + 2;
+
+    fragment = {
+      sequence = seq:uint(),
+      current  = cur:uint(),
+      total    = total:uint(),
+    }
   end
-
-  if has_ack_counter then
+  if flags.has_ack_counter then
     header_tree:add(header_ack_counter_high, buffer(header_offset, 1))
     header_offset = header_offset + 1;
   end
-
-  if has_ack_counter and has_ack_request then
+  if flags.has_ack_counter and flags.has_ack_request then
     header_tree:add(header_ack_counter_low, buffer(header_offset, 1))
     header_offset = header_offset + 1;
   end
 
+  -- Finalize header length
   header_tree:set_len(header_offset - flags_length)
 
-  local bytes_remaining = length - header_offset - crc_length
+  local crc_length = 4
+  local bytes_remaining = buffer:len() - header_offset - crc_length
+
+  local crc_buffer = buffer(buffer:len() - crc_length, crc_length)
+
   local opcode_data = nil
+  local body_buffer_with_opcode = buffer(header_offset, bytes_remaining)
   if bytes_remaining > 0 and has_opcode then
-    opcode_value = buffer(header_offset, 2):uint()
+    local opcode_buffer = buffer(header_offset, 2)
+    local opcode_value = opcode_buffer:uint()
     opcode_data = OPCODE_TABLE[opcode_value]
 
-    if opcode_data then
-      pinfo.cols.info = "[" .. opcode_data.name .. "] " .. tostring(pinfo.cols['info'])
-    end
+    tree:add(opcode, opcode_buffer(), opcode_buffer():uint(), nil, opcode_data.name)
 
-    subtree:add(opcode, buffer(header_offset, 2), opcode_value, nil, opcode_data.name)
     header_offset = header_offset + 2
     bytes_remaining = bytes_remaining - 2
   end
 
-  if bytes_remaining > 0 then
-    add_payload(subtree, buffer(header_offset, bytes_remaining), opcode_data)
+  local body_buffer = buffer(header_offset, bytes_remaining)
+
+  return {
+    flags                   = flags,
+    fragment                = fragment,
+    opcode                  = opcode_data,
+    body_buffer             = body_buffer,
+    body_buffer_with_opcode = body_buffer_with_opcode,
+    crc_buffer              = crc_buffer,
+  }
+end
+
+function reassemble_fragment(pinfo, fragment, fragment_opcode, buffer)
+  -- Fragment sequence numbers are tracked for each side of a
+  -- connection. This isn't an amazing way to express that (it'll probably
+  -- fail badly on long captures), but it works for small ones.
+  local fragment_key = (
+    tostring(pinfo.src) .. ":" .. tostring(pinfo.src_port) .. "-" ..
+    tostring(pinfo.dst) .. ":" .. tostring(pinfo.dst_port) ..
+    "@" .. tostring(fragment.sequence))
+
+  if MsgFragments[fragment_key] == nil then
+    MsgFragments[fragment_key] = {}
   end
 
+  local packet = MsgFragments[fragment_key]
+  if packet.complete then
+    -- Already built the whole packet, return it
+    return packet
+  end
+
+  -- Packet isn't complete yet, safe to modify
+  if fragment_opcode then
+    -- Track the opcode across all fragments for readability
+    packet.opcode = fragment_opcode
+  end
+
+  -- Add all packet fragments with array-like indexes
+  -- Converting to 1-index so #packet reports length accurately
+  packet[fragment.current + 1] = buffer:bytes()
+
+  if #packet < fragment.total then
+    -- More fragments to collect, return incomplete
+    return {
+      complete = false,
+      opcode = packet.opcode,
+      buffer = nil,
+    }
+  end
+
+  -- We've collected all the fragments; packet is ready to reassemble
+  local reassembledPacket = ByteArray.new()
+  for _, value in ipairs(packet) do
+    reassembledPacket = reassembledPacket .. value
+  end
+
+  -- Mark the packet as handled and save the buffer.
+  -- Packets are visited multiple times, so we can't discard
+  -- the data after this - but replacing the packet with a
+  -- combined result means the individual fragments can be
+  -- garbage collected.
+  local result = {
+    opcode = packet.opcode,
+    buffer = reassembledPacket,
+    complete = true,
+  }
+  MsgFragments[fragment_key] = result
+
+  return result
+end
+
+function eq_protocol.dissector(buffer, pinfo, tree)
+  local length = buffer:len()
+  if length == 0 then return end
+
+  pinfo.cols.protocol = eq_protocol.name
+
+  local subtree = tree:add(eq_protocol, buffer(), "EQ Protocol Data")
+  local meta = dissect_metadata(subtree, buffer)
+
+  -- Track body subtree and buffer separately, so reassembled packets can be shown
+  local body_subtree = subtree
+  local body_buffer = meta.body_buffer
+  if meta.fragment then
+    local reassembled = reassemble_fragment(pinfo, meta.fragment, meta.opcode, meta.body_buffer_with_opcode)
+
+    -- Track opcodes across fragmented packets
+    if reassembled and reassembled.opcode then
+      meta.opcode = reassembled.opcode
+    end
+
+    if reassembled and reassembled.complete then
+      -- Fully reassembled packet; replace the body buffer/subtree based on the reassembled buffer
+      body_buffer = reassembled.buffer:tvb("reassembled")
+      body_subtree = tree:add(reassembled_label, body_buffer())
+
+      -- Pull opcode off the front of the buffer first
+      local opcode_buffer = body_buffer(0, 2)
+      body_buffer = body_buffer(2)
+      body_subtree:add(opcode, opcode_buffer, opcode_buffer:uint(), nil, reassembled.opcode.name)
+    else
+      -- Not a full packet, do not dissect the whole body
+      meta.incomplete = true
+    end
+  end
+
+  if meta.opcode then
+    pinfo.cols.info = "[" .. meta.opcode.name .. "] " .. tostring(pinfo.cols['info'])
+  end
+
+  -- Mark the fragment bytes
+  if meta.fragment then
+    subtree:add(fragment_label, meta.body_buffer())
+  end
+
+  if body_buffer:len() > 0 and not meta.incomplete then
+    -- Add the payload to the body subtree, which can be different from
+    -- subtree if this is a reassembled buffer
+    add_payload(body_subtree, body_buffer, meta.opcode)
+  end
+
+  local crc_length = 4
   subtree:add_le(crc, buffer(length - crc_length, crc_length))
 end
 
 function add_payload(subtree, buffer, opcode_data)
   if opcode_data == nil or opcode_data.dissect == nil then
-    subtree:add(payload, buffer)
+    subtree:add(payload, buffer())
   else
     local payload_subtree = subtree:add(eq_protocol, buffer, opcode_data.name)
     opcode_data.dissect(payload_subtree, buffer)
