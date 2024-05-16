@@ -53,46 +53,12 @@ opcode = ProtoField.uint16("everquest.opcode", "OpCode", base.HEX)
 payload = ProtoField.bytes("everquest.payload", "Payload")
 crc = ProtoField.uint32("everquest.crc", "CRC32", base.HEX)
 
-motd_message =  ProtoField.string("everquest.motd.message", "Message")
-selectcharacter_name =  ProtoField.string("everquest.select_character.name", "Character Name")
-login_accountname = ProtoField.string("everquest.login.accountname", "Account Name")
-login_password = ProtoField.string("everquest.login.password", "Password")
-login_unknown189 = ProtoField.bytes("everquest.login.unknown189", "Unknown")
-login_zoning = ProtoField.bool("everquest.login.zoning", "Zoning")
-login_unknown193 = ProtoField.bytes("everquest.login.unknown193", "Unknown")
-
-rpserver_fv = ProtoField.bool("everquest.rpserver.fv", "FV rules")
-rpserver_pvp = ProtoField.bool("everquest.rpserver.pvp", "PVP")
-rpserver_auto_identify = ProtoField.bool("everquest.rpserver.auto_identify", "Auto Identify")
-rpserver_namegen = ProtoField.bool("everquest.rpserver.namegen", "Name Gen")
-rpserver_gibberish = ProtoField.bool("everquest.rpserver.gibberish", "Gibberish")
-rpserver_testserver = ProtoField.bool("everquest.rpserver.testserver", "Test Server")
-rpserver_locale = ProtoField.uint32("everquest.rpserver.locale", "Locale")
-rpserver_profanity_filter = ProtoField.bool("everquest.rpserver.profanity_filter", "Profanity Filter")
-rpserver_worldshortname = ProtoField.string("everquest.rpserver.worldshortname", "World Shortname")
-rpserver_loggingserverpassword = ProtoField.string("everquest.rpserver.loggingserver_password", "Logging Server Password")
-rpserver_loggingserveraddress = ProtoField.string("everquest.rpserver.loggingserver_address", "Logging Server Address")
-rpserver_loggingserverport = ProtoField.uint32("everquest.rpserver.loggingserver_port", "Logging Server Port")
-rpserver_localizedemailaddress = ProtoField.string("everquest.rpserver.localized_email", "Localized Email Address")
-rpserver_unknown1 = ProtoField.bytes("everquest.rpserver.unknown1", "Unknown")
-rpserver_unknown2 = ProtoField.bytes("everquest.rpserver.unknown2", "Unknown")
-
-accessgranted_response = ProtoField.bool("everquest.access_granted.response", "Response")
-accessgranted_name = ProtoField.string("everquest.access_granted.name", "Name")
-
-expansion_expansions = ProtoField.uint32("everquest.expansions.expansions", "Expansions")
-
-eq_protocol.fields = {
+local fields = {
   reassembled_label, fragment_label, flags_label, flag_unknown_bit_0, flag_has_ack_request, flag_is_closing, flag_is_fragment, flag_has_ack_counter,
   flag_is_first_packet, flag_is_closing_2, flag_is_sequence_end, flag_is_keep_alive_ack, flag_unknown_bit_9,
   flag_has_ack_response, flag_unknown_bit_11, flag_unknown_bit_12, flag_unknown_bit_13, flag_unknown_bit_14, flag_unknown_bit_15,
   header_sequence_number, header_ack_response, header_ack_request, header_fragment_sequence, header_fragment_current,
   header_fragment_total, header_ack_counter_high, header_ack_counter_low, opcode, payload, crc,
-  motd_message, selectcharacter_name, login_accountname, login_password, login_unknown189, login_zoning, login_unknown193,
-  rpserver_fv, rpserver_pvp, rpserver_auto_identify, rpserver_namegen, rpserver_gibberish, rpserver_testserver,
-  rpserver_locale, rpserver_profanity_filter, rpserver_worldshortname, rpserver_loggingserverpassword,
-  rpserver_loggingserveraddress, rpserver_loggingserverport, rpserver_localizedemailaddress, rpserver_unknown1,
-  rpserver_unknown2, accessgranted_response, accessgranted_name, expansion_expansions
 }
 
 function eq_protocol.init()
@@ -202,7 +168,7 @@ function dissect_metadata(tree, buffer)
   if bytes_remaining > 0 and has_opcode then
     local opcode_buffer = buffer(header_offset, 2)
     local opcode_value = opcode_buffer:uint()
-    opcode_data = OPCODE_TABLE[opcode_value]
+    opcode_data = OPCODES[opcode_value]
 
     tree:add(opcode, opcode_buffer(), opcode_buffer():uint(), nil, opcode_data.name)
 
@@ -340,7 +306,7 @@ function add_payload(subtree, buffer, opcode_data)
     subtree:add(payload, buffer())
   else
     local payload_subtree = subtree:add(eq_protocol, buffer, opcode_data.name)
-    opcode_data.dissect(payload_subtree, buffer)
+    opcode_data:dissect(payload_subtree, buffer)
   end
 end
 
@@ -352,69 +318,102 @@ local function add_string(tree, field, buffer)
   -- Returns the length in case the next string is offset by it
   return len
 end
-local function dissect_string(field)
-  return function(tree, buffer)
-    add_string(tree, field, buffer)
+local function dissect_string(field_name)
+  return function(self, tree, buffer)
+    add_string(tree, self.f[field_name], buffer)
   end
 end
 
-local udp_port = DissectorTable.get("udp.port")
-udp_port:add(5998, eq_protocol)
-udp_port:add(9000, eq_protocol)
-
-OPCODE_TABLE = {
+OPCODES = {
   -- Opcodes with dissect handlers
   [0x0180] = {
     name ="MSG_SELECT_CHARACTER",
-    dissect = dissect_string(selectcharacter_name),
+    f = {
+      name = ProtoField.string("everquest.select_character.name", "Character Name"),
+    },
+    dissect = dissect_string("name"),
   },
   [0x0710] = {
     name ="MSG_ACCESS_GRANTED",
-    dissect = function(tree, buffer)
-      tree:add(accessgranted_response, buffer(0, 1))
-      add_string(tree, accessgranted_name, buffer(1, 64))
+    f = {
+      response = ProtoField.bool("everquest.access_granted.response", "Response"),
+      name = ProtoField.string("everquest.access_granted.name", "Name"),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add(self.f.response, buffer(0, 1))
+      add_string(tree, self.f.name, buffer(1, 64))
     end
   },
   [0x5818] = {
     name ="MSG_LOGIN",
-    dissect = function(tree, buffer)
-      local password_offset = 1 + add_string(tree, login_accountname, buffer(0, 127))
-      add_string(tree, login_password, buffer(password_offset, 15))
+    f = {
+      accountname = ProtoField.string("everquest.login.accountname", "Account Name"),
+      password = ProtoField.string("everquest.login.password", "Password"),
+      unknown1 = ProtoField.bytes("everquest.login.unknown1", "Unknown"),
+      zoning = ProtoField.bool("everquest.login.zoning", "Zoning"),
+      unknown2 = ProtoField.bytes("everquest.login.unknown2", "Unknown"),
+    },
+    dissect = function(self, tree, buffer)
+      local password_offset = 1 + add_string(tree, self.f.accountname, buffer(0, 127))
+      add_string(tree, self.f.password, buffer(password_offset, 15))
 
-      tree:add(login_unknown189, buffer(151, 41))
-      tree:add(login_zoning, buffer(192, 1))
-      tree:add(login_unknown193, buffer(193, 3))
+      tree:add(self.f.unknown1, buffer(151, 41))
+      tree:add(self.f.zoning, buffer(192, 1))
+      tree:add(self.f.unknown2, buffer(193, 3))
     end
   },
   [0xc341] = {
     name ="MSG_RPSERVER",
-    dissect = function(tree, buffer)
-      tree:add(rpserver_fv, buffer(0, 4))
-      tree:add(rpserver_pvp, buffer(4, 4))
-      tree:add(rpserver_auto_identify, buffer(8, 4))
-      tree:add(rpserver_namegen, buffer(12, 4))
-      tree:add(rpserver_gibberish, buffer(16, 4))
-      tree:add(rpserver_testserver, buffer(20, 4))
-      tree:add_le(rpserver_locale, buffer(24, 4))
-      tree:add(rpserver_profanity_filter, buffer(28, 4))
-      add_string(tree, rpserver_worldshortname, buffer(32, 32))
-      add_string(tree, rpserver_loggingserverpassword, buffer(64, 32))
-      tree:add(rpserver_unknown1, buffer(96, 16))
-      add_string(tree, rpserver_loggingserveraddress, buffer(112, 16))
-      tree:add(rpserver_unknown2, buffer(126, 48))
-      tree:add_le(rpserver_loggingserverport, buffer(176, 4))
-      add_string(tree, rpserver_localizedemailaddress, buffer(180, 64))
+    f = {
+      fv = ProtoField.bool("everquest.rpserver.fv", "FV rules"),
+      pvp = ProtoField.bool("everquest.rpserver.pvp", "PVP"),
+      auto_identify = ProtoField.bool("everquest.rpserver.auto_identify", "Auto Identify"),
+      namegen = ProtoField.bool("everquest.rpserver.namegen", "Name Gen"),
+      gibberish = ProtoField.bool("everquest.rpserver.gibberish", "Gibberish"),
+      testserver = ProtoField.bool("everquest.rpserver.testserver", "Test Server"),
+      locale = ProtoField.uint32("everquest.rpserver.locale", "Locale"),
+      profanity_filter = ProtoField.bool("everquest.rpserver.profanity_filter", "Profanity Filter"),
+      worldshortname = ProtoField.string("everquest.rpserver.worldshortname", "World Shortname"),
+      loggingserverpassword = ProtoField.string("everquest.rpserver.loggingserver_password", "Logging Server Password"),
+      loggingserveraddress = ProtoField.string("everquest.rpserver.loggingserver_address", "Logging Server Address"),
+      loggingserverport = ProtoField.uint32("everquest.rpserver.loggingserver_port", "Logging Server Port"),
+      localizedemailaddress = ProtoField.string("everquest.rpserver.localized_email", "Localized Email Address"),
+      unknown1 = ProtoField.bytes("everquest.rpserver.unknown1", "Unknown"),
+      unknown2 = ProtoField.bytes("everquest.rpserver.unknown2", "Unknown"),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add(self.f.fv, buffer(0, 4))
+      tree:add(self.f.pvp, buffer(4, 4))
+      tree:add(self.f.auto_identify, buffer(8, 4))
+      tree:add(self.f.namegen, buffer(12, 4))
+      tree:add(self.f.gibberish, buffer(16, 4))
+      tree:add(self.f.testserver, buffer(20, 4))
+      tree:add_le(self.f.locale, buffer(24, 4))
+      tree:add(self.f.profanity_filter, buffer(28, 4))
+      add_string(tree, self.f.worldshortname, buffer(32, 32))
+      add_string(tree, self.f.loggingserverpassword, buffer(64, 32))
+      tree:add(self.f.unknown1, buffer(96, 16))
+      add_string(tree, self.f.loggingserveraddress, buffer(112, 16))
+      tree:add(self.f.unknown2, buffer(126, 48))
+      tree:add_le(self.f.loggingserverport, buffer(176, 4))
+      add_string(tree, self.f.localizedemailaddress, buffer(180, 64))
     end
   },
   [0xd841] = {
     name ="MSG_KUNARK",
-    dissect = function(tree, buffer)
-      tree:add_le(expansion_expansions, buffer(0, 4))
+    f = {
+      expansions = ProtoField.uint32("everquest.expansions.expansions", "Expansions"),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add_le(self.f.expansions, buffer(0, 4))
     end
   },
   [0xdd41] = {
     name ="MSG_MOTD",
-    dissect = dissect_string(motd_message),
+    f = {
+      message =  ProtoField.string("everquest.motd.message", "Message"),
+    },
+    dissect = dissect_string("message"),
   },
 
   -- Opcodes without handlers
@@ -2405,3 +2404,14 @@ OPCODE_TABLE = {
     name ="MSG_ZSERVER_STATUS",
   },
 }
+
+for _, opcode in pairs(OPCODES) do
+  for _, field in pairs(opcode.f or {}) do
+    table.insert(fields, field)
+  end
+end
+eq_protocol.fields = fields
+
+local udp_port = DissectorTable.get("udp.port")
+udp_port:add(5998, eq_protocol)
+udp_port:add(9000, eq_protocol)
