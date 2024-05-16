@@ -344,6 +344,116 @@ OPCODES = {
       add_string(tree, self.f.name, buffer(1, 64))
     end
   },
+  [0x4740] = {
+    name ="MSG_SEND_CHARACTERS",
+    -- Ew: The fields of the character list are a repeated strut-of-arrays, so we're generating them
+    -- instead of copying everything 10 times
+    f = (function()
+      local result = {}
+
+      for i = 1, 10, 1 do
+        local function s(prefix, suffix)
+          if suffix == nil then
+            return prefix .. tostring(i)
+          else
+            return prefix .. tostring(i) .. suffix
+          end
+        end
+
+        local prefix = "everquest.send_characters.character"
+
+        result[s("character")] = ProtoField.none(s(prefix), s("Character "))
+        result[s("name")]      = ProtoField.string(s(prefix, ".name"), "Name")
+        result[s("level")]     = ProtoField.uint8(s(prefix, ".level"), "Level")
+        result[s("class")]     = ProtoField.uint8(s(prefix, ".class"), "Class")
+        result[s("race")]      = ProtoField.uint16(s(prefix, ".race"), "Race")
+        result[s("zone")]      = ProtoField.uint32(s(prefix, ".zone"), "Zone")
+        result[s("gender")]    = ProtoField.uint8(s(prefix, ".gender"), "Gender")
+        result[s("face")]      = ProtoField.uint8(s(prefix, ".face"), "Zone")
+
+        result[s("equip")]     = ProtoField.none(s(prefix, ".equip"), "Equipment Textures") -- 9x uint32
+        result[s("head")]      = ProtoField.uint32(s(prefix, ".equip.head"), "Head")
+        result[s("chest")]     = ProtoField.uint32(s(prefix, ".equip.chest"), "Chest")
+        result[s("arms")]      = ProtoField.uint32(s(prefix, ".equip.arms"), "Arms")
+        result[s("wrist")]     = ProtoField.uint32(s(prefix, ".equip.wrist"), "Wrists")
+        result[s("hands")]     = ProtoField.uint32(s(prefix, ".equip.hands"), "Hands")
+        result[s("legs")]      = ProtoField.uint32(s(prefix, ".equip.legs"), "Legs")
+        result[s("feet")]      = ProtoField.uint32(s(prefix, ".equip.feet"), "Feet")
+        result[s("primary_e")]   = ProtoField.uint32(s(prefix, ".equip.primary"), "Main Hand")
+        result[s("secondary_e")] = ProtoField.uint32(s(prefix, ".equip.secondary"), "Off Hand")
+
+        result[s("colors")]      = ProtoField.none(s(prefix, ".cs_colors"), "Character Equipment Colors (RR GG BB 00)")
+        result[s("head_c")]      = ProtoField.uint32(s(prefix, ".cs_colors.head"), "Head")
+        result[s("chest_c")]     = ProtoField.uint32(s(prefix, ".cs_colors.chest"), "Chest")
+        result[s("arms_c")]      = ProtoField.uint32(s(prefix, ".cs_colors.arms"), "Arms")
+        result[s("wrist_c")]     = ProtoField.uint32(s(prefix, ".cs_colors.wrist"), "Wrists")
+        result[s("hands_c")]     = ProtoField.uint32(s(prefix, ".cs_colors.hands"), "Hands")
+        result[s("legs_c")]      = ProtoField.uint32(s(prefix, ".cs_colors.legs"), "Legs")
+        result[s("feet_c")]      = ProtoField.uint32(s(prefix, ".cs_colors.feet"), "Feet")
+        result[s("primary_c")]   = ProtoField.uint32(s(prefix, ".cs_colors.primary"), "Main Hand")
+        result[s("secondary_c")] = ProtoField.uint32(s(prefix, ".cs_colors.secondary"), "Off Hand")
+
+        result[s("deity")]      = ProtoField.uint16(s(prefix, ".deity"), "Deity")
+        result[s("primary")]    = ProtoField.uint32(s(prefix, ".primary"), "Primary IDFile Number")
+        result[s("secondary")]  = ProtoField.uint32(s(prefix, ".secondary"), "Secondary IDFile Number")
+        result[s("haircolor")]  = ProtoField.uint8(s(prefix, ".haircolor"), "Hair Color")
+        result[s("beardcolor")] = ProtoField.uint8(s(prefix, ".beardcolor"), "Beard Color")
+        result[s("eyecolor1")]  = ProtoField.uint8(s(prefix, ".eyecolor1"), "Eye Color 2")
+        result[s("eyecolor2")]  = ProtoField.uint8(s(prefix, ".eyecolor2"), "Eye Color 1")
+        result[s("hairstyle")]  = ProtoField.uint8(s(prefix, ".hairstyle"), "Hairstyle")
+        result[s("beard")]      = ProtoField.uint8(s(prefix, ".beard"), "Beard")
+      end
+
+      return result
+      end)(),
+    dissect = function(self, tree, buffer)
+      for i = 1, 10, 1 do
+        -- buffer isn't true, but the character is spread across the whole message
+        local char = tree:add(self.f["character" .. i], buffer)
+        local idx = i - 1
+
+        add_string(char, self.f["name" .. i], buffer(idx * 64))
+        char:add(self.f["level" .. i], buffer(640 + idx, 1))
+        char:add(self.f["class" .. i], buffer(650 + idx, 1))
+        char:add(self.f["race" .. i], buffer(660 + idx, 1))
+        char:add_le(self.f["zone" .. i], buffer(680 + idx, 4))
+        char:add(self.f["gender" .. i], buffer(720 + idx, 1))
+        char:add(self.f["face" .. i], buffer(730 + idx, 1))
+
+        local equip = char:add(self.f["equip" .. i], buffer(740 + idx, 36))
+        equip:add_le(self.f["head" .. i],      buffer(740 + idx, 4))
+        equip:add_le(self.f["chest" .. i],     buffer(744 + idx, 4))
+        equip:add_le(self.f["arms" .. i],      buffer(748 + idx, 4))
+        equip:add_le(self.f["wrist" .. i],     buffer(752 + idx, 4))
+        equip:add_le(self.f["hands" .. i],     buffer(756 + idx, 4))
+        equip:add_le(self.f["legs" .. i],      buffer(760 + idx, 4))
+        equip:add_le(self.f["feet" .. i],      buffer(764 + idx, 4))
+        equip:add_le(self.f["primary_e" .. i],   buffer(768 + idx, 4))
+        equip:add_le(self.f["secondary_e" .. i], buffer(772 + idx, 4))
+
+        local color = char:add(self.f["colors" .. i], buffer(1100 + idx, 36))
+        color:add_le(self.f["head_c" .. i],      buffer(1100 + idx, 4))
+        color:add_le(self.f["chest_c" .. i],     buffer(1104 + idx, 4))
+        color:add_le(self.f["arms_c" .. i],      buffer(1108 + idx, 4))
+        color:add_le(self.f["wrist_c" .. i],     buffer(1112 + idx, 4))
+        color:add_le(self.f["hands_c" .. i],     buffer(1116 + idx, 4))
+        color:add_le(self.f["legs_c" .. i],      buffer(1120 + idx, 4))
+        color:add_le(self.f["feet_c" .. i],      buffer(1124 + idx, 4))
+        color:add_le(self.f["primary_c" .. i],   buffer(1128 + idx, 4))
+        color:add_le(self.f["secondary_c" .. i], buffer(1132 + idx, 4))
+
+        char:add_le(self.f["deity" .. i], buffer(1460 + idx, 2))
+        char:add_le(self.f["primary" .. i], buffer(1480 + idx, 4))
+        char:add_le(self.f["secondary" .. i], buffer(1520 + idx, 4))
+        char:add(self.f["haircolor" .. i], buffer(1560 + idx, 1))
+        char:add(self.f["beardcolor" .. i], buffer(1570 + idx, 1))
+        char:add(self.f["eyecolor1" .. i], buffer(1580 + idx, 1))
+        char:add(self.f["eyecolor2" .. i], buffer(1590 + idx, 1))
+        char:add(self.f["hairstyle" .. i], buffer(1600 + idx, 1))
+        char:add(self.f["beard" .. i], buffer(1610 + idx, 1))
+      end
+    end
+  },
   [0x5818] = {
     name ="MSG_LOGIN",
     f = {
@@ -1814,9 +1924,6 @@ OPCODES = {
   },
   [0x1520] = {
     name ="MSG_SENDPC_WEQ",
-  },
-  [0x4740] = {
-    name ="MSG_SEND_CHARACTERS",
   },
   [0x0a41] = {
     name ="MSG_SEND_HDR",
