@@ -2,7 +2,7 @@
 
 Wireshark Dissector for the [legacy EverQuest protocol](https://web.archive.org/web/20010504111746/http://xylor.dhs.org:80/Protocol.txt)
 
-![](https://user-images.githubusercontent.com/913141/220410194-5a24f489-4441-4bf9-b0f8-387a3fd727bc.png)
+![](https://github.com/nickgal/eq-wireshark/assets/913141/ee61d153-0f61-404a-9f9b-df082c283197)
 
 ## Usage
 
