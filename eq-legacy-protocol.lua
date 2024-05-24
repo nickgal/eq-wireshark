@@ -168,7 +168,7 @@ function dissect_metadata(tree, buffer)
   if bytes_remaining > 0 and has_opcode then
     local opcode_buffer = buffer(header_offset, 2)
     local opcode_value = opcode_buffer:uint()
-    opcode_data = OPCODES[opcode_value]
+    opcode_data = OPCODES[opcode_value] or {name =  string.format("0x%X", opcode_value)}
 
     tree:add(opcode, opcode_buffer(), opcode_buffer():uint(), nil, opcode_data.name)
 
