@@ -2129,6 +2129,9 @@ OPCODES = {
   [0x3141] = {
     name ="MSG_SPLIT_MONEY",
   },
+  [0xa940] = {
+    name ="MSG_START_CASTING",
+  },
   [0x6641] = {
     name ="MSG_START_ICON",
   },
