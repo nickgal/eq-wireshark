@@ -1,5 +1,3 @@
-eq_protocol = Proto("everquest",  "EQ Legacy Protocol")
-
 Flags = {
   UnknownBit0 = 0x0001,
   HasAckRequest = 0x0002,
@@ -19,54 +17,174 @@ Flags = {
   UnknownBit15 = 0x8000
 }
 
-reassembled_label = ProtoField.bytes("everquest.reassembled", "EQ Protocol Data (Reassembled)")
-fragment_label = ProtoField.bytes("everquest.fragment", "EQ Protocol Data Fragment")
-flags_label = ProtoField.new("Flags", "everquest.flags", ftypes.UINT16, nil, base.HEX)
+SHARED_FIELDS = {
+  reassembled_label = {
+    type = ProtoField.bytes,
+    name = "reassembled",
+    args = { "EQ Protocol Data (Reassembled)" },
+  },
+  fragment_label = {
+    type = ProtoField.bytes,
+    name = "fragment",
+    args = { "EQ Protocol Data Fragment" },
+  },
+  flags_label = {
+    type = function(name) return ProtoField.new("Flags", name, ftypes.UINT16, nil, base.HEX) end,
+    name = "flags",
+  },
 
-flag_unknown_bit_0 = ProtoField.bool("everquest.flags.unknown_bit_0", "UnknownBit0", 16, nil, Flags.UnknownBit0)
-flag_has_ack_request = ProtoField.bool("everquest.flags.has_ack_request", "HasAckRequest", 16, nil, Flags.HasAckRequest)
-flag_is_closing = ProtoField.bool("everquest.flags.is_closing", "IsClosing", 16, nil, Flags.IsClosing)
-flag_is_fragment = ProtoField.bool("everquest.flags.is_fragment", "IsFragment", 16, nil, Flags.IsFragment)
-flag_has_ack_counter = ProtoField.bool("everquest.flags.has_ack_counter", "HasAckCounter", 16, nil, Flags.HasAckCounter)
-flag_is_first_packet = ProtoField.bool("everquest.flags.is_first_packet", "IsFirstPacket", 16, nil, Flags.IsFirstPacket)
-flag_is_closing_2 = ProtoField.bool("everquest.flags.is_closing_2", "IsClosing2", 16, nil, Flags.IsClosing2)
-flag_is_sequence_end = ProtoField.bool("everquest.flags.is_sequence_end", "IsSequenceEnd", 16, nil, Flags.IsSequenceEnd)
-flag_is_keep_alive_ack = ProtoField.bool("everquest.flags.is_keep_alive_ack", "IsKeepAliveAck", 16, nil, Flags.IsKeepAliveAck)
-flag_unknown_bit_9 = ProtoField.bool("everquest.flags.unknown_bit_9", "UnknownBit9", 16, nil, Flags.UnknownBit9)
-flag_has_ack_response = ProtoField.bool("everquest.flags.has_ack_response", "HasAckResponse", 16, nil, Flags.HasAckResponse)
-flag_unknown_bit_11 = ProtoField.bool("everquest.flags.unknown_bit_11", "UnknownBit11", 16, nil, Flags.UnknownBit11)
-flag_unknown_bit_12 = ProtoField.bool("everquest.flags.unknown_bit_12", "UnknownBit12", 16, nil, Flags.UnknownBit12)
-flag_unknown_bit_13 = ProtoField.bool("everquest.flags.unknown_bit_13", "UnknownBit13", 16, nil, Flags.UnknownBit13)
-flag_unknown_bit_14 = ProtoField.bool("everquest.flags.unknown_bit_14", "UnknownBit14", 16, nil, Flags.UnknownBit14)
-flag_unknown_bit_15 = ProtoField.bool("everquest.flags.unknown_bit_15", "UnknownBit15", 16, nil, Flags.UnknownBit15)
+  flag_unknown_bit_0 = {
+    type = ProtoField.bool,
+    name = "flags.unknown_bit_0",
+    args = { "UnknownBit0", 16, nil, Flags.UnknownBit0 },
+  },
+  flag_has_ack_request = {
+    type = ProtoField.bool,
+    name = "flags.has_ack_request",
+    args = { "HasAckRequest", 16, nil, Flags.HasAckRequest },
+  },
+  flag_is_closing = {
+    type = ProtoField.bool,
+    name = "flags.is_closing",
+    args = { "IsClosing", 16, nil, Flags.IsClosing },
+  },
+  flag_is_fragment = {
+    type = ProtoField.bool,
+    name = "flags.is_fragment",
+    args = { "IsFragment", 16, nil, Flags.IsFragment },
+  },
+  flag_has_ack_counter = {
+    type = ProtoField.bool,
+    name = "flags.has_ack_counter",
+    args = { "HasAckCounter", 16, nil, Flags.HasAckCounter },
+  },
+  flag_is_first_packet = {
+    type = ProtoField.bool,
+    name = "flags.is_first_packet",
+    args = { "IsFirstPacket", 16, nil, Flags.IsFirstPacket },
+  },
+  flag_is_closing_2 = {
+    type = ProtoField.bool,
+    name = "flags.is_closing_2",
+    args = { "IsClosing2", 16, nil, Flags.IsClosing2 },
+  },
+  flag_is_sequence_end = {
+    type = ProtoField.bool,
+    name = "flags.is_sequence_end",
+    args = { "IsSequenceEnd", 16, nil, Flags.IsSequenceEnd },
+  },
+  flag_is_keep_alive_ack = {
+    type = ProtoField.bool,
+    name = "flags.is_keep_alive_ack",
+    args = { "IsKeepAliveAck", 16, nil, Flags.IsKeepAliveAck },
+  },
+  flag_unknown_bit_9 = {
+    type = ProtoField.bool,
+    name = "flags.unknown_bit_9",
+    args = { "UnknownBit9", 16, nil, Flags.UnknownBit9 },
+  },
+  flag_has_ack_response = {
+    type = ProtoField.bool,
+    name = "flags.has_ack_response",
+    args = { "HasAckResponse", 16, nil, Flags.HasAckResponse },
+  },
+  flag_unknown_bit_11 = {
+    type = ProtoField.bool,
+    name = "flags.unknown_bit_11",
+    args = { "UnknownBit11", 16, nil, Flags.UnknownBit11 },
+  },
+  flag_unknown_bit_12 = {
+    type = ProtoField.bool,
+    name = "flags.unknown_bit_12",
+    args = { "UnknownBit12", 16, nil, Flags.UnknownBit12 },
+  },
+  flag_unknown_bit_13 = {
+    type = ProtoField.bool,
+    name = "flags.unknown_bit_13",
+    args = { "UnknownBit13", 16, nil, Flags.UnknownBit13 },
+  },
+  flag_unknown_bit_14 = {
+    type = ProtoField.bool,
+    name = "flags.unknown_bit_14",
+    args = { "UnknownBit14", 16, nil, Flags.UnknownBit14 },
+  },
+  flag_unknown_bit_15 = {
+    type = ProtoField.bool,
+    name = "flags.unknown_bit_15",
+    args = { "UnknownBit15", 16, nil, Flags.UnknownBit15 },
+  },
 
-header_sequence_number = ProtoField.uint16("everquest.header.sequence_number", "SequenceNumber", base.HEX)
-header_ack_response = ProtoField.uint16("everquest.header.ack_response", "AckResponse", base.HEX)
-header_ack_request = ProtoField.uint16("everquest.header.ack_request", "AckRequest", base.HEX)
-header_fragment_sequence = ProtoField.uint16("everquest.header.fragment_sequence", "FragmentSequence", base.HEX)
-header_fragment_current = ProtoField.uint16("everquest.header.fragment_current", "FragmentCurrent", base.HEX)
-header_fragment_total = ProtoField.uint16("everquest.header.fragment_total", "FragmentTotal", base.HEX)
-header_ack_counter_high = ProtoField.uint8("everquest.header.ack_counter_high", "AckCounterHigh", base.HEX)
-header_ack_counter_low = ProtoField.uint8("everquest.header.ack_counter_low", "AckCounterLow", base.HEX)
+  header_sequence_number = {
+    type = ProtoField.uint16,
+    name = "header.sequence_number",
+    args = { "SequenceNumber", base.HEX },
+  },
+  header_ack_response = {
+    type = ProtoField.uint16,
+    name = "header.ack_response",
+    args = { "AckResponse", base.HEX },
+  },
+  header_ack_request = {
+    type = ProtoField.uint16,
+    name = "header.ack_request",
+    args = { "AckRequest", base.HEX },
+  },
+  header_fragment_sequence = {
+    type = ProtoField.uint16,
+    name = "header.fragment_sequence",
+    args = { "FragmentSequence", base.HEX },
+  },
+  header_fragment_current = {
+    type = ProtoField.uint16,
+    name = "header.fragment_current",
+    args = { "FragmentCurrent", base.HEX },
+  },
+  header_fragment_total = {
+    type = ProtoField.uint16,
+    name = "header.fragment_total",
+    args = { "FragmentTotal", base.HEX },
+  },
+  header_ack_counter_high = {
+    type = ProtoField.uint8,
+    name = "header.ack_counter_high",
+    args = { "AckCounterHigh", base.HEX },
+  },
+  header_ack_counter_low = {
+    type = ProtoField.uint8,
+    name = "header.ack_counter_low",
+    args = { "AckCounterLow", base.HEX },
+  },
 
-opcode = ProtoField.uint16("everquest.opcode", "OpCode", base.HEX)
-payload = ProtoField.bytes("everquest.payload", "Payload")
-crc = ProtoField.uint32("everquest.crc", "CRC32", base.HEX)
-
-local fields = {
-  reassembled_label, fragment_label, flags_label, flag_unknown_bit_0, flag_has_ack_request, flag_is_closing, flag_is_fragment, flag_has_ack_counter,
-  flag_is_first_packet, flag_is_closing_2, flag_is_sequence_end, flag_is_keep_alive_ack, flag_unknown_bit_9,
-  flag_has_ack_response, flag_unknown_bit_11, flag_unknown_bit_12, flag_unknown_bit_13, flag_unknown_bit_14, flag_unknown_bit_15,
-  header_sequence_number, header_ack_response, header_ack_request, header_fragment_sequence, header_fragment_current,
-  header_fragment_total, header_ack_counter_high, header_ack_counter_low, opcode, payload, crc,
+  opcode = {
+    type = ProtoField.uint16,
+    name = "opcode",
+    args = { "OpCode", base.HEX },
+  },
+  payload = {
+    type = ProtoField.bytes,
+    name = "payload",
+    args = { "Payload" },
+  },
+  crc = {
+    type = ProtoField.uint32,
+    name = "crc",
+    args = { "CRC32", base.HEX },
+  },
 }
 
-function eq_protocol.init()
-  -- Initialize global fragment table
-  MsgFragments = {}
+function make_shared_fields(prefix)
+  local result = {}
+
+  for key, field_def in pairs(SHARED_FIELDS) do
+    local name = prefix .. "." .. field_def.name
+    local field = field_def.type(name, unpack(field_def.args or {}))
+    result[key] = field
+  end
+
+  return result
 end
 
-function dissect_metadata(tree, buffer)
+function dissect_metadata(protocol, tree, buffer)
   local flags_length = 2
   local flags_buffer = buffer(0, flags_length)
   local flags_value = flags_buffer:le_uint()
@@ -90,54 +208,57 @@ function dissect_metadata(tree, buffer)
   }
   local fragment = nil
 
+  -- Space-saving shortcut
+  local sf = protocol.shared_fields
+
   -- Flag dissector data
-  local flag_tree = tree:add(flags_label, flags_buffer)
-  flag_tree:add_le(flag_unknown_bit_0, flags_buffer)
-  flag_tree:add_le(flag_has_ack_request, flags_buffer)
-  flag_tree:add_le(flag_is_closing, flags_buffer)
-  flag_tree:add_le(flag_is_fragment, flags_buffer)
-  flag_tree:add_le(flag_has_ack_counter, flags_buffer)
-  flag_tree:add_le(flag_is_first_packet, flags_buffer)
-  flag_tree:add_le(flag_is_closing_2, flags_buffer)
-  flag_tree:add_le(flag_is_sequence_end, flags_buffer)
-  flag_tree:add_le(flag_is_keep_alive_ack, flags_buffer)
-  flag_tree:add_le(flag_unknown_bit_9, flags_buffer)
-  flag_tree:add_le(flag_has_ack_response, flags_buffer)
-  flag_tree:add_le(flag_unknown_bit_11, flags_buffer)
-  flag_tree:add_le(flag_unknown_bit_12, flags_buffer)
-  flag_tree:add_le(flag_unknown_bit_13, flags_buffer)
-  flag_tree:add_le(flag_unknown_bit_14, flags_buffer)
-  flag_tree:add_le(flag_unknown_bit_15, flags_buffer)
+  local flag_tree = tree:add(sf.flags_label, flags_buffer)
+  flag_tree:add_le(sf.flag_unknown_bit_0, flags_buffer)
+  flag_tree:add_le(sf.flag_has_ack_request, flags_buffer)
+  flag_tree:add_le(sf.flag_is_closing, flags_buffer)
+  flag_tree:add_le(sf.flag_is_fragment, flags_buffer)
+  flag_tree:add_le(sf.flag_has_ack_counter, flags_buffer)
+  flag_tree:add_le(sf.flag_is_first_packet, flags_buffer)
+  flag_tree:add_le(sf.flag_is_closing_2, flags_buffer)
+  flag_tree:add_le(sf.flag_is_sequence_end, flags_buffer)
+  flag_tree:add_le(sf.flag_is_keep_alive_ack, flags_buffer)
+  flag_tree:add_le(sf.flag_unknown_bit_9, flags_buffer)
+  flag_tree:add_le(sf.flag_has_ack_response, flags_buffer)
+  flag_tree:add_le(sf.flag_unknown_bit_11, flags_buffer)
+  flag_tree:add_le(sf.flag_unknown_bit_12, flags_buffer)
+  flag_tree:add_le(sf.flag_unknown_bit_13, flags_buffer)
+  flag_tree:add_le(sf.flag_unknown_bit_14, flags_buffer)
+  flag_tree:add_le(sf.flag_unknown_bit_15, flags_buffer)
 
   local header_offset = flags_length
-  local header_tree = tree:add(eq_protocol, buffer(header_offset), "[Header]")
+  local header_tree = tree:add(protocol.protocol, buffer(header_offset), "[Header]")
 
-  header_tree:add(header_sequence_number, buffer(header_offset, 2))
+  header_tree:add(sf.header_sequence_number, buffer(header_offset, 2))
   header_offset = header_offset + 2
 
   if flags.has_ack_response then
-    header_tree:add(header_ack_response, buffer(header_offset, 2))
+    header_tree:add(sf.header_ack_response, buffer(header_offset, 2))
     header_offset = header_offset + 2
   end
   if flags.has_ack_request then
-    header_tree:add(header_ack_request, buffer(header_offset, 2))
+    header_tree:add(sf.header_ack_request, buffer(header_offset, 2))
     header_offset = header_offset + 2
   end
   local has_opcode = true
   if flags.is_fragment then
     local seq = buffer(header_offset, 2)
-    header_tree:add(header_fragment_sequence, seq)
+    header_tree:add(sf.header_fragment_sequence, seq)
     header_offset = header_offset + 2;
 
     local cur = buffer(header_offset, 2)
-    header_tree:add(header_fragment_current, cur)
+    header_tree:add(sf.header_fragment_current, cur)
     header_offset = header_offset + 2;
 
     -- The first fragment has an opcode
     has_opcode = cur:uint() == 0
 
     local total = buffer(header_offset, 2)
-    header_tree:add(header_fragment_total, total)
+    header_tree:add(sf.header_fragment_total, total)
     header_offset = header_offset + 2;
 
     fragment = {
@@ -147,11 +268,11 @@ function dissect_metadata(tree, buffer)
     }
   end
   if flags.has_ack_counter then
-    header_tree:add(header_ack_counter_high, buffer(header_offset, 1))
+    header_tree:add(sf.header_ack_counter_high, buffer(header_offset, 1))
     header_offset = header_offset + 1;
   end
   if flags.has_ack_counter and flags.has_ack_request then
-    header_tree:add(header_ack_counter_low, buffer(header_offset, 1))
+    header_tree:add(sf.header_ack_counter_low, buffer(header_offset, 1))
     header_offset = header_offset + 1;
   end
 
@@ -168,9 +289,9 @@ function dissect_metadata(tree, buffer)
   if bytes_remaining > 0 and has_opcode then
     local opcode_buffer = buffer(header_offset, 2)
     local opcode_value = opcode_buffer:uint()
-    opcode_data = OPCODES[opcode_value] or {name =  string.format("0x%X", opcode_value)}
+    opcode_data = protocol.opcodes[opcode_value] or {name =  string.format("0x%X", opcode_value)}
 
-    tree:add(opcode, opcode_buffer(), opcode_buffer():uint(), nil, opcode_data.name)
+    tree:add(sf.opcode, opcode_buffer(), opcode_buffer():uint(), nil, opcode_data.name)
 
     header_offset = header_offset + 2
     bytes_remaining = bytes_remaining - 2
@@ -188,7 +309,7 @@ function dissect_metadata(tree, buffer)
   }
 end
 
-function reassemble_fragment(pinfo, fragment, fragment_opcode, buffer)
+function reassemble_fragment(protocol, pinfo, fragment, fragment_opcode, buffer)
   -- Fragment sequence numbers are tracked for each side of a
   -- connection. This isn't an amazing way to express that (it'll probably
   -- fail badly on long captures), but it works for small ones.
@@ -197,11 +318,11 @@ function reassemble_fragment(pinfo, fragment, fragment_opcode, buffer)
     tostring(pinfo.dst) .. ":" .. tostring(pinfo.dst_port) ..
     "@" .. tostring(fragment.sequence))
 
-  if MsgFragments[fragment_key] == nil then
-    MsgFragments[fragment_key] = {}
+  if protocol.MsgFragments[fragment_key] == nil then
+    protocol.MsgFragments[fragment_key] = {}
   end
 
-  local packet = MsgFragments[fragment_key]
+  local packet = protocol.MsgFragments[fragment_key]
   if packet.complete then
     -- Already built the whole packet, return it
     return packet
@@ -242,25 +363,29 @@ function reassemble_fragment(pinfo, fragment, fragment_opcode, buffer)
     buffer = reassembledPacket,
     complete = true,
   }
-  MsgFragments[fragment_key] = result
+  protocol.MsgFragments[fragment_key] = result
 
   return result
 end
 
-function eq_protocol.dissector(buffer, pinfo, tree)
+function shared_dissector(protocol, buffer, pinfo, tree)
   local length = buffer:len()
   if length == 0 then return end
 
-  pinfo.cols.protocol = eq_protocol.name
+  pinfo.cols.protocol = protocol.protocol.name
 
-  local subtree = tree:add(eq_protocol, buffer(), "EQ Protocol Data")
-  local meta = dissect_metadata(subtree, buffer)
+  local subtree = tree:add(protocol.protocol, buffer(), "EQ Protocol Data")
+  local meta = dissect_metadata(protocol, subtree, buffer)
+
+  -- Space-saving shortcut
+  local sf = protocol.shared_fields
 
   -- Track body subtree and buffer separately, so reassembled packets can be shown
   local body_subtree = subtree
   local body_buffer = meta.body_buffer
   if meta.fragment then
-    local reassembled = reassemble_fragment(pinfo, meta.fragment, meta.opcode, meta.body_buffer_with_opcode)
+    local reassembled = reassemble_fragment(
+      protocol, pinfo, meta.fragment, meta.opcode, meta.body_buffer_with_opcode)
 
     -- Track opcodes across fragmented packets
     if reassembled and reassembled.opcode then
@@ -270,12 +395,12 @@ function eq_protocol.dissector(buffer, pinfo, tree)
     if reassembled and reassembled.complete then
       -- Fully reassembled packet; replace the body buffer/subtree based on the reassembled buffer
       body_buffer = reassembled.buffer:tvb("reassembled")
-      body_subtree = tree:add(reassembled_label, body_buffer())
+      body_subtree = tree:add(sf.reassembled_label, body_buffer())
 
       -- Pull opcode off the front of the buffer first
       local opcode_buffer = body_buffer(0, 2)
       body_buffer = body_buffer(2)
-      body_subtree:add(opcode, opcode_buffer, opcode_buffer:uint(), nil, reassembled.opcode.name)
+      body_subtree:add(sf.opcode, opcode_buffer, opcode_buffer:uint(), nil, reassembled.opcode.name)
     else
       -- Not a full packet, do not dissect the whole body
       meta.incomplete = true
@@ -288,24 +413,24 @@ function eq_protocol.dissector(buffer, pinfo, tree)
 
   -- Mark the fragment bytes
   if meta.fragment then
-    subtree:add(fragment_label, meta.body_buffer())
+    subtree:add(sf.fragment_label, meta.body_buffer())
   end
 
   if body_buffer:len() > 0 and not meta.incomplete then
     -- Add the payload to the body subtree, which can be different from
     -- subtree if this is a reassembled buffer
-    add_payload(body_subtree, body_buffer, meta.opcode)
+    add_payload(protocol, body_subtree, body_buffer, meta.opcode)
   end
 
   local crc_length = 4
-  subtree:add_le(crc, buffer(length - crc_length, crc_length))
+  subtree:add_le(sf.crc, buffer(length - crc_length, crc_length))
 end
 
-function add_payload(subtree, buffer, opcode_data)
+function add_payload(protocol, subtree, buffer, opcode_data)
   if opcode_data == nil or opcode_data.dissect == nil then
-    subtree:add(payload, buffer())
+    subtree:add(protocol.shared_fields.payload, buffer())
   else
-    local payload_subtree = subtree:add(eq_protocol, buffer, opcode_data.name)
+    local payload_subtree = subtree:add(protocol.protocol, buffer, opcode_data.name)
     opcode_data:dissect(payload_subtree, buffer)
   end
 end
@@ -324,7 +449,7 @@ local function dissect_string(field_name)
   end
 end
 
-OPCODES = {
+GAME_OPCODES = {
   -- Opcodes with dissect handlers
   [0x0180] = {
     name ="MSG_SELECT_CHARACTER",
@@ -507,7 +632,7 @@ OPCODES = {
       tree:add(self.f.unknown2, buffer(126, 48))
       tree:add_le(self.f.loggingserverport, buffer(176, 4))
       add_string(tree, self.f.localizedemailaddress, buffer(180, 64))
-    end
+    end,
   },
   [0xd841] = {
     name ="MSG_KUNARK",
@@ -516,7 +641,7 @@ OPCODES = {
     },
     dissect = function(self, tree, buffer)
       tree:add_le(self.f.expansions, buffer(0, 4))
-    end
+    end,
   },
   [0xdd41] = {
     name ="MSG_MOTD",
@@ -2515,12 +2640,46 @@ OPCODES = {
   },
 }
 
-for _, opcode in pairs(OPCODES) do
-  for _, field in pairs(opcode.f or {}) do
-    table.insert(fields, field)
+
+
+function protocol_with_fields(protocol, opcode_table)
+  local wrapped_protocol = {
+    opcodes = opcode_table,
+    protocol = protocol,
+  }
+
+  protocol.init = function()
+    -- Initialize global fragment table
+    wrapped_protocol.MsgFragments = {}
   end
+  protocol.dissector = function(buffer, pinfo, tree)
+    shared_dissector(wrapped_protocol, buffer, pinfo, tree)
+  end
+
+  -- copy fields
+  local field_list = {}
+  local shared_fields = {}
+  for key, field in pairs(make_shared_fields(protocol.name)) do
+    table.insert(field_list, field)
+    shared_fields[key] = field
+  end
+
+  for _, opcode in pairs(opcode_table) do
+    for _, field in pairs(opcode.f or {}) do
+      table.insert(field_list, field)
+    end
+  end
+
+  protocol.fields = field_list
+  wrapped_protocol.shared_fields = shared_fields
+
+  -- Wrap the protocol in a table with a few extra attributes
+  return protocol
 end
-eq_protocol.fields = fields
+
+eq_protocol = protocol_with_fields(
+  Proto("everquest",  "EQ Legacy Protocol"),
+   GAME_OPCODES)
 
 local udp_port = DissectorTable.get("udp.port")
 udp_port:add(5998, eq_protocol)
