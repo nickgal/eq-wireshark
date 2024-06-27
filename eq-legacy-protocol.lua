@@ -2640,6 +2640,194 @@ GAME_OPCODES = {
   },
 }
 
+LOGIN_OPCODES = {
+  [0x0100] = {
+    name = "OP_LoginInfo/OP_LoginPC",
+    f = {
+      encrypted_data = ProtoField.bytes("everquest_login.login.encrypted_data", "Encrypted Data"),
+      last_server_name = ProtoField.string("everquest_login.login.last_server_name", "Last Server Name"),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add(self.f.encrypted_data, buffer(0, 40))
+      add_string(tree, self.f.last_server_name, buffer(40))
+    end,
+  },
+  [0x0200] = {
+    name = "OP_FatalError/OP_ClientError",
+  },
+  [0x0400] = {
+    name = "OP_SessionId/OP_LoginAccepted",
+    f = {
+      session_id = ProtoField.bytes("everquest_login.session_id.session_id", "Session ID"),
+      unused = ProtoField.string("everquest_login.session_id.unused", "Unused"),
+      unknown = ProtoField.uint32("everquest_login.session_id.unknown", "Unknown"),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add(self.f.session_id, buffer(0, 10))
+      tree:add(self.f.unused, buffer(10, 7))
+      tree:add_le(self.f.unknown, buffer(17))
+    end,
+  },
+  [0x0500] = {
+    name = "OP_AllFinish",
+  },
+  [0x0600] = {
+    name = "OP_Chat_ChannelList",
+  },
+  [0x0700] = {
+    name = "OP_Chat_JoinChannel",
+  },
+  [0x0800] = {
+    name = "OP_Chat_PartChannel",
+  },
+  [0x0900] = {
+    name = "OP_Chat_ChannelMessage",
+  },
+  [0x0a00] = {
+    name = "OP_Chat_Tell",
+  },
+  [0x0b00] = {
+    name = "OP_Chat_SysMsg",
+  },
+  [0x0c00] = {
+    name = "OP_Chat_CreateChannel",
+  },
+  [0x0d00] = {
+    name = "OP_Chat_ChangeChannel",
+  },
+  [0x0e00] = {
+    name = "OP_Chat_DeleteChannel",
+  },
+  [0x1000] = {
+    name = "OP_Chat_UserList",
+  },
+  [0x1a00] = {
+    name = "OP_Reg_GetPricing",
+  },
+  [0x1b00] = {
+    name = "SISAMSG_REGISTER",
+  },
+  [0x1d00] = {
+    name = "SISAMSG_REGISTER_OK",
+  },
+  [0x2400] = {
+    name = "OP_Chat_ChannelWelcome",
+  },
+  [0x3000] = {
+    name = "OP_Chat_PopupMakeWindow",
+  },
+  [0x3300] = {
+    name = "OP_BillingInfoAccepted",
+  },
+  [0x3400] = {
+    name = "OP_CheckGameCardValid",
+  },
+  [0x3600] = {
+    name = "OP_GameCardTimeLeft",
+  },
+  [0x4100] = {
+    name = "SISAMSG_REPORT_REGISTER",
+  },
+  [0x4200] = {
+    name = "SISAMSG_LOGIN_EXPIRED",
+  },
+  [0x4300] = {
+    name = "SISAMSG_LOGIN_CANCELED",
+  },
+  [0x4500] = {
+    name = "OP_ChangePassword",
+  },
+  [0x4600] = {
+    name = "SISAMSG_LIST_EQSERVERS",
+    f = {
+      numservers = ProtoField.uint16("everquest_login.list_servers.numservers", "Number of Servers"),
+      padding = ProtoField.uint16("everquest_login.list_servers.padding", "Padding"),
+      show_user_count = ProtoField.uint16("everquest_login.list_servers.show_user_count", "Show User Count"),
+      -- middle goes here
+      server = ProtoField.string("everquest_login.list_servers.server0", "Name"),
+      server_name = ProtoField.string("everquest_login.list_servers.server0.name", "Name"),
+      server_address = ProtoField.string("everquest_login.list_servers.server0.address", "IP"),
+      server_flag_greenname = ProtoField.uint32("everquest_login.list_servers.server0.greenname", "Green Name"),
+      server_flags = ProtoField.uint32("everquest_login.list_servers.server0.flags", "Flags (0x8 means hidden)"),
+      server_world_id = ProtoField.int32("everquest_login.list_servers.server0.world_id", "World ID"),
+      server_user_count = ProtoField.uint32("everquest_login.list_servers.server0.user_count", "User Count"),
+      -- end
+      admin = ProtoField.uint16("everquest_login.list_servers.admin", "Admin"),
+      unused = ProtoField.bytes("everquest_login.list_servers.unused", "Unused"),
+      kunark = ProtoField.uint8("everquest_login.list_servers.kunark", "Kunark"),
+      velious = ProtoField.uint8("everquest_login.list_servers.velious", "Velious"),
+      unsed2 = ProtoField.bytes("everquest_login.list_servers.unused2", "Unused"),
+    },
+    --dissect = function(self, tree, buffer)
+    --  tree:add(self.f.color, buffer(0, 4))
+    --  add_string(tree, self.f.message, buffer(4))
+    --end,
+  },
+  [0x4700] = {
+    name = "OP_SessionKey/OP_PlayEverquestRequest",
+  },
+  [0x4800] = {
+    name = "OP_RequestServerStatus/OP_LoginUnknown1",
+  },
+  [0x4900] = {
+    name = "OP_ServerName",
+  },
+  [0x4a00] = {
+    name = "OP_SendServerStatus/OP_LoginUnknown2",
+  },
+  [0x5100] = {
+    name = "SISAMSG_OPTION_LOGIN",
+  },
+  [0x5200] = {
+    name = "SISAMSG_BANNER",
+    f = {
+      -- Maybe color?
+      unknown = ProtoField.bytes("everquest_login.banner.unknown", "Unknown"),
+      message = ProtoField.string("everquest_login.banner.message", "Message"),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add(self.f.color, buffer(0, 4))
+      add_string(tree, self.f.message, buffer(4))
+    end,
+  },
+  [0x5500] = {
+    name = "OP_Chat_GuildsList",
+  },
+  [0x5700] = {
+    name = "OP_Chat_GuildEdit",
+  },
+  [0x5900] = {
+    name = "OP_Version/OP_SessionReady",
+    f = {
+      message = ProtoField.string("everquest_login.session_ready.message", "Message"),
+    },
+    dissect = dissect_string("message"),
+  },
+  [0x7a00] = {
+    name = "OP_RenewAccountBillingInfo",
+  },
+  [0x7c00] = {
+    name = "SISAMSG_POLL",
+  },
+  [0x7f00] = {
+    name = "SISAMSG_LOGIN_OEM",
+  },
+  [0x8800] = {
+    name = "SISAMSG_REQUEST_PREMIUM_INFO",
+  },
+  [0x8e00] = {
+    name = "OP_LoginOSX",
+  },
+  [0x9100] = {
+    name = "TOKEN_PREORDER_LOY_BLURB",
+  },
+  [0x9200] = {
+    name = "TOKEN_ORDER_LOY_BLURB",
+  },
+  [0x9300] = {
+    name = "loy_order_success",
+  },
+}
 
 
 function protocol_with_fields(protocol, opcode_table)
@@ -2681,6 +2869,12 @@ eq_protocol = protocol_with_fields(
   Proto("everquest",  "EQ Legacy Protocol"),
    GAME_OPCODES)
 
+eq_login_protocol = protocol_with_fields(
+  Proto("everquest_login",  "EQ Legacy Login Protocol"),
+  LOGIN_OPCODES)
+
 local udp_port = DissectorTable.get("udp.port")
 udp_port:add(5998, eq_protocol)
 udp_port:add(9000, eq_protocol)
+
+udp_port:add(6000, eq_login_protocol)
