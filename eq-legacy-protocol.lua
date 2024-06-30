@@ -2739,32 +2739,98 @@ LOGIN_OPCODES = {
   },
   [0x4600] = {
     name = "SISAMSG_LIST_EQSERVERS",
-    f = {
-      numservers = ProtoField.uint16("everquest_login.list_servers.numservers", "Number of Servers"),
-      padding = ProtoField.uint16("everquest_login.list_servers.padding", "Padding"),
-      show_user_count = ProtoField.uint16("everquest_login.list_servers.show_user_count", "Show User Count"),
-      -- middle goes here
-      server = ProtoField.string("everquest_login.list_servers.server0", "Name"),
-      server_name = ProtoField.string("everquest_login.list_servers.server0.name", "Name"),
-      server_address = ProtoField.string("everquest_login.list_servers.server0.address", "IP"),
-      server_flag_greenname = ProtoField.uint32("everquest_login.list_servers.server0.greenname", "Green Name"),
-      server_flags = ProtoField.uint32("everquest_login.list_servers.server0.flags", "Flags (0x8 means hidden)"),
-      server_world_id = ProtoField.int32("everquest_login.list_servers.server0.world_id", "World ID"),
-      server_user_count = ProtoField.uint32("everquest_login.list_servers.server0.user_count", "User Count"),
-      -- end
-      admin = ProtoField.uint16("everquest_login.list_servers.admin", "Admin"),
-      unused = ProtoField.bytes("everquest_login.list_servers.unused", "Unused"),
-      kunark = ProtoField.uint8("everquest_login.list_servers.kunark", "Kunark"),
-      velious = ProtoField.uint8("everquest_login.list_servers.velious", "Velious"),
-      unsed2 = ProtoField.bytes("everquest_login.list_servers.unused2", "Unused"),
-    },
-    --dissect = function(self, tree, buffer)
-    --  tree:add(self.f.color, buffer(0, 4))
-    --  add_string(tree, self.f.message, buffer(4))
-    --end,
+    f = (function()
+      local result = {
+        numservers = ProtoField.uint16("everquest_login.list_servers.numservers", "Number of Servers"),
+        padding = ProtoField.uint16("everquest_login.list_servers.padding", "Padding"),
+        show_user_count = ProtoField.uint8("everquest_login.list_servers.show_user_count", "Show User Count"),
+
+        admin = ProtoField.uint16("everquest_login.list_servers.admin", "Admin"),
+        unused = ProtoField.bytes("everquest_login.list_servers.unused", "Unused"),
+        kunark = ProtoField.uint8("everquest_login.list_servers.kunark", "Kunark"),
+        velious = ProtoField.uint8("everquest_login.list_servers.velious", "Velious"),
+        unsed2 = ProtoField.bytes("everquest_login.list_servers.unused2", "Unused"),
+      }
+
+      local prefix = "everquest_login.list_servers.server"
+      -- TODO: Figure out how many of these to account for.
+      -- For now, let's say 10.
+      for i = 1, 10, 1 do
+        local function s(prefix, suffix)
+          if suffix == nil then
+            return prefix .. tostring(i)
+          else
+            return prefix .. tostring(i) .. suffix
+          end
+        end
+
+        result[s("server")] = ProtoField.none(s(prefix), "Server " .. i)
+        result[s("name")] = ProtoField.string(s(prefix, ".name"), "Name")
+        result[s("address")] = ProtoField.string(s(prefix, ".address"), "IP")
+        result[s("flag_greenname")] = ProtoField.uint32(s(prefix, ".greenname"), "green name")
+        result[s("flags")] = ProtoField.uint32(s(prefix, ".flags"), "flags (0x8 means hidden)")
+        result[s("world_id")] = ProtoField.int32(s(prefix, ".world_id"), "world id")
+        result[s("user_count")] = ProtoField.uint32(s(prefix, ".user_count"), "user count")
+      end
+
+      return result
+    end)(),
+    dissect = function(self, tree, buffer)
+      tree:add_le(self.f.numservers, buffer(0, 2))
+      tree:add_le(self.f.padding, buffer(2, 2))
+      tree:add_le(self.f.show_user_count, buffer(4, 1))
+
+      local num_servers = buffer(0, 2):le_uint()
+      if num_servers == 0 then
+        return
+      end
+
+      local offset_buf = buffer(5)
+      for i = 1, num_servers, 1 do
+        -- todo: set size after
+        local server = tree:add(self.f["server" .. i], offset_buf)
+
+        local name_len = add_string(server, self.f["name" .. i], offset_buf)
+        server:append_text(": " .. offset_buf(0, name_len):string())
+        offset_buf = offset_buf(name_len + 1)
+        local addr_len = add_string(server, self.f["address" .. i], offset_buf)
+        offset_buf = offset_buf(addr_len + 1)
+
+        server:add_le(self.f["flag_greenname" .. i], offset_buf(0, 4))
+        server:add_le(self.f["flags" .. i], offset_buf(4, 4))
+        server:add_le(self.f["world_id" .. i], offset_buf(8, 4))
+        server:add_le(self.f["user_count" .. i], offset_buf(12, 4))
+
+        -- two strings, two string terminators, and 16 bytes of flags/IDs
+        server:set_len(18 + name_len + addr_len)
+
+        -- string offsets already included, skip ahead by 16
+        offset_buf = offset_buf(16)
+      end
+
+      tree:add_le(self.f.admin, offset_buf(0, 2))
+      tree:add_le(self.f.unused, offset_buf(2, 8))
+      tree:add_le(self.f.kunark, offset_buf(10, 1))
+      tree:add_le(self.f.velious, offset_buf(11, 1))
+      tree:add_le(self.f.unsed2, offset_buf(12, 11))
+    end,
   },
   [0x4700] = {
     name = "OP_SessionKey/OP_PlayEverquestRequest",
+    f = {
+      server = ProtoField.string("everquest_login.play_everquest.server", "Server"),
+      key = ProtoField.string("everquest_login.play_everquest.key", "Key"),
+    },
+    dissect = function (self, tree, buffer)
+      local len = #buffer():string();
+      if len > 0 then
+        -- Client-to-server, sending the server ID
+        tree:add(self.f.server, buffer(0, len))
+      else
+        -- Client-to-server, sending the key
+        add_string(tree, self.f.key, buffer(1))
+      end
+    end
   },
   [0x4800] = {
     name = "OP_RequestServerStatus/OP_LoginUnknown1",
@@ -2781,12 +2847,11 @@ LOGIN_OPCODES = {
   [0x5200] = {
     name = "SISAMSG_BANNER",
     f = {
-      -- Maybe color?
       unknown = ProtoField.bytes("everquest_login.banner.unknown", "Unknown"),
       message = ProtoField.string("everquest_login.banner.message", "Message"),
     },
     dissect = function(self, tree, buffer)
-      tree:add(self.f.color, buffer(0, 4))
+      tree:add(self.f.unknown, buffer(0, 4))
       add_string(tree, self.f.message, buffer(4))
     end,
   },
