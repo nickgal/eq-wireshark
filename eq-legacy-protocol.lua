@@ -177,7 +177,7 @@ function make_shared_fields(prefix)
 
   for key, field_def in pairs(SHARED_FIELDS) do
     local name = prefix .. "." .. field_def.name
-    local field = field_def.type(name, unpack(field_def.args or {}))
+    local field = field_def.type(name, table.unpack(field_def.args or {}))
     result[key] = field
   end
 
