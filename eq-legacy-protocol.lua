@@ -2598,6 +2598,16 @@ GAME_OPCODES = {
   },
   [0x0480] = {
     name ="MSG_ZONE_ADDRESS",
+    f = {
+      hostname = ProtoField.string("everquest.zone_address.hostname", "Hostname"),
+      port = ProtoField.int16("everquest.zone_address.port", "Port"),
+    },
+    dissect = function(self, tree, buffer)
+      local zone_port = buffer(128, 2)
+      tree:add(self.f.hostname, buffer(0, 128))
+      tree:add(self.f.port, zone_port)
+      DissectorTable.get("udp.port"):add(zone_port:int(), eq_protocol)
+    end
   },
   [0xa840] = {
     name ="MSG_ZONE_ALL",
@@ -2939,7 +2949,7 @@ eq_login_protocol = protocol_with_fields(
   LOGIN_OPCODES)
 
 local udp_port = DissectorTable.get("udp.port")
-udp_port:add(5998, eq_protocol)
 udp_port:add(9000, eq_protocol)
-
+udp_port:add(5998, eq_login_protocol)
+udp_port:add(5999, eq_login_protocol)
 udp_port:add(6000, eq_login_protocol)
