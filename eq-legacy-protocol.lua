@@ -868,6 +868,9 @@ GAME_OPCODES = {
   [0x2341] = {
     name ="MSG_CMD_INDEX",
   },
+  [0x8041] = {
+    name = "MSG_COLORED_TEXT",
+  },
   [0xb940] = {
     name ="MSG_COMBINE",
   },
