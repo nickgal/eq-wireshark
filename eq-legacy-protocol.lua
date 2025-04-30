@@ -3,7 +3,7 @@ Flags = {
   HasAckRequest = 0x0002,
   IsClosing = 0x0004,
   IsFragment = 0x0008,
-  HasAckCounter = 0x0010,
+  HasStream = 0x0010,
   IsFirstPacket = 0x0020,
   IsClosing2 = 0x0040,
   IsSequenceEnd = 0x0080,
@@ -53,10 +53,10 @@ SHARED_FIELDS = {
     name = "flags.is_fragment",
     args = { "IsFragment", 16, nil, Flags.IsFragment },
   },
-  flag_has_ack_counter = {
+  flag_has_stream = {
     type = ProtoField.bool,
-    name = "flags.has_ack_counter",
-    args = { "HasAckCounter", 16, nil, Flags.HasAckCounter },
+    name = "flags.has_stream",
+    args = { "HasStream", 16, nil, Flags.HasStream },
   },
   flag_is_first_packet = {
     type = ProtoField.bool,
@@ -144,15 +144,15 @@ SHARED_FIELDS = {
     name = "header.fragment_total",
     args = { "FragmentTotal", base.HEX },
   },
-  header_ack_counter_high = {
+  header_stream_number = {
     type = ProtoField.uint8,
-    name = "header.ack_counter_high",
-    args = { "AckCounterHigh", base.HEX },
+    name = "header.stream_number",
+    args = { "StreamNumber", base.HEX },
   },
-  header_ack_counter_low = {
+  header_stream_sequence_number = {
     type = ProtoField.uint8,
-    name = "header.ack_counter_low",
-    args = { "AckCounterLow", base.HEX },
+    name = "header.stream_sequence_number",
+    args = { "StreamSequenceNumber", base.HEX },
   },
 
   opcode = {
@@ -193,7 +193,7 @@ function dissect_metadata(protocol, tree, buffer)
     has_ack_request   = bit.band(flags_value, Flags.HasAckRequest) ~= 0,
     is_closing        = bit.band(flags_value, Flags.IsClosing) ~= 0,
     is_fragment       = bit.band(flags_value, Flags.IsFragment) ~= 0,
-    has_ack_counter   = bit.band(flags_value, Flags.HasAckCounter) ~= 0,
+    has_stream        = bit.band(flags_value, Flags.HasStream) ~= 0,
     is_first_packet   = bit.band(flags_value, Flags.IsFirstPacket) ~= 0,
     is_closing_2      = bit.band(flags_value, Flags.IsClosing2) ~= 0,
     is_sequence_end   = bit.band(flags_value, Flags.IsSequenceEnd) ~= 0,
@@ -217,7 +217,7 @@ function dissect_metadata(protocol, tree, buffer)
   flag_tree:add_le(sf.flag_has_ack_request, flags_buffer)
   flag_tree:add_le(sf.flag_is_closing, flags_buffer)
   flag_tree:add_le(sf.flag_is_fragment, flags_buffer)
-  flag_tree:add_le(sf.flag_has_ack_counter, flags_buffer)
+  flag_tree:add_le(sf.flag_has_stream, flags_buffer)
   flag_tree:add_le(sf.flag_is_first_packet, flags_buffer)
   flag_tree:add_le(sf.flag_is_closing_2, flags_buffer)
   flag_tree:add_le(sf.flag_is_sequence_end, flags_buffer)
@@ -267,12 +267,12 @@ function dissect_metadata(protocol, tree, buffer)
       total    = total:uint(),
     }
   end
-  if flags.has_ack_counter then
-    header_tree:add(sf.header_ack_counter_high, buffer(header_offset, 1))
+  if flags.has_stream then
+    header_tree:add(sf.header_stream_number, buffer(header_offset, 1))
     header_offset = header_offset + 1;
   end
-  if flags.has_ack_counter and flags.has_ack_request then
-    header_tree:add(sf.header_ack_counter_low, buffer(header_offset, 1))
+  if flags.has_stream and flags.has_ack_request then
+    header_tree:add(sf.header_stream_sequence_number, buffer(header_offset, 1))
     header_offset = header_offset + 1;
   end
 
@@ -2682,7 +2682,7 @@ LOGIN_OPCODES = {
     end,
   },
   [0x0500] = {
-    name = "OP_AllFinish",
+    name = "OP_AllFinish/OP_LoginDisconnect",
   },
   [0x0600] = {
     name = "OP_Chat_ChannelList",
