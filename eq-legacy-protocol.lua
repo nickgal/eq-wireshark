@@ -1524,6 +1524,20 @@ GAME_OPCODES = {
   },
   [0x9240] = {
     name ="MSG_MATERIAL_SWAP",
+    f = {
+      spawn_id    = ProtoField.uint16("everquest.material_swap.spawn_id",    "Spawn ID"),
+      wear_slot   = ProtoField.uint8 ("everquest.material_swap.wear_slot",   "Wear Slot"),
+      material    = ProtoField.uint16("everquest.material_swap.material",    "Material"),
+      color       = ProtoField.uint32("everquest.material_swap.color",       "Color", base.HEX),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add_le(self.f.spawn_id,  buffer(0, 2))
+      tree:add   (self.f.wear_slot, buffer(2, 1))
+      -- byte 3: alignment padding
+      tree:add_le(self.f.material,  buffer(4, 2))
+      -- bytes 6-7: alignment padding
+      tree:add_le(self.f.color,     buffer(8, 4))
+    end,
   },
   [0x9d41] = {
     name ="MSG_MEND",
