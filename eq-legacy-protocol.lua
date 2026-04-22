@@ -644,7 +644,11 @@ GAME_OPCODES = {
       pop        = ProtoField.bool("everquest.expansions.pop",     "Planes of Power",          32, nil, 0x0008),
     },
     dissect = function(self, tree, buffer)
-      tree:add_le(self.f.expansions, buffer(0, 4))
+      local subtree = tree:add_le(self.f.expansions, buffer(0, 4))
+      subtree:add_le(self.f.classic, buffer(0, 4))
+      subtree:add_le(self.f.velious, buffer(0, 4))
+      subtree:add_le(self.f.luclin,  buffer(0, 4))
+      subtree:add_le(self.f.pop,     buffer(0, 4))
     end,
   },
   [0xdd41] = {
