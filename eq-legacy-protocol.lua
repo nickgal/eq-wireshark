@@ -1613,20 +1613,20 @@ GAME_OPCODES = {
   [0x8b40] = {
     name ="MSG_NAME_SUBMIT",
     f = {
-      name       = ProtoField.string("everquest.name_submit.name", "Name"),
-      race       = ProtoField.uint16("everquest.name_submit.race", "Race"),
-      unknown066 = ProtoField.uint16("everquest.name_submit.unknown066", "Unknown (066)"),
-      class_     = ProtoField.uint16("everquest.name_submit.class", "Class"),
-      approval   = ProtoField.bool("everquest.name_submit.approval", "Approved"),
+      name     = ProtoField.string("everquest.name_submit.name", "Name"),
+      race     = ProtoField.uint32("everquest.name_submit.race", "Race"),
+      class_   = ProtoField.uint32("everquest.name_submit.class", "Class"),
+      deity    = ProtoField.uint32("everquest.name_submit.deity", "Deity"),
+      approval = ProtoField.bool("everquest.name_submit.approval", "Approved"),
     },
     dissect = function(self, tree, buffer)
       if buffer:len() == 1 then
         tree:add(self.f.approval, buffer(0, 1))
       else
         add_string(tree, self.f.name, buffer(0, 64))
-        tree:add_le(self.f.race, buffer(64, 2))
-        tree:add_le(self.f.unknown066, buffer(66, 2))
-        tree:add_le(self.f.class_, buffer(68, 2))
+        tree:add_le(self.f.race, buffer(64, 4))
+        tree:add_le(self.f.class_, buffer(68, 4))
+        tree:add_le(self.f.deity, buffer(72, 4))
       end
     end,
   },
