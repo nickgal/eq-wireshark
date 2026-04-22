@@ -1628,6 +1628,52 @@ GAME_OPCODES = {
   },
   [0x4940] = {
     name ="MSG_NEW_PC",
+    f = {
+      name       = ProtoField.string("everquest.new_pc.name", "Name"),
+      gender     = ProtoField.uint8("everquest.new_pc.gender", "Gender"),
+      race       = ProtoField.uint16("everquest.new_pc.race", "Race"),
+      class_     = ProtoField.uint16("everquest.new_pc.class", "Class"),
+      str        = ProtoField.int16("everquest.new_pc.str", "STR"),
+      sta        = ProtoField.int16("everquest.new_pc.sta", "STA"),
+      cha        = ProtoField.int16("everquest.new_pc.cha", "CHA"),
+      dex        = ProtoField.int16("everquest.new_pc.dex", "DEX"),
+      int_       = ProtoField.int16("everquest.new_pc.int", "INT"),
+      agi        = ProtoField.int16("everquest.new_pc.agi", "AGI"),
+      wis        = ProtoField.int16("everquest.new_pc.wis", "WIS"),
+      zone_id    = ProtoField.uint32("everquest.new_pc.zone_id", "Starting Zone"),
+      deity      = ProtoField.uint16("everquest.new_pc.deity", "Deity"),
+      oldface    = ProtoField.uint8("everquest.new_pc.oldface", "Face (old)"),
+      haircolor  = ProtoField.uint8("everquest.new_pc.haircolor", "Hair Color"),
+      beardcolor = ProtoField.uint8("everquest.new_pc.beardcolor", "Beard Color"),
+      eyecolor1  = ProtoField.uint8("everquest.new_pc.eyecolor1", "Eye Color 1"),
+      eyecolor2  = ProtoField.uint8("everquest.new_pc.eyecolor2", "Eye Color 2"),
+      hairstyle  = ProtoField.uint8("everquest.new_pc.hairstyle", "Hairstyle"),
+      beard      = ProtoField.uint8("everquest.new_pc.beard", "Beard"),
+      luclinface = ProtoField.uint8("everquest.new_pc.luclinface", "Face"),
+    },
+    dissect = function(self, tree, buffer)
+      add_string(tree, self.f.name, buffer(2, 64))
+      tree:add(self.f.gender,     buffer(136, 1))
+      tree:add_le(self.f.race,    buffer(138, 2))
+      tree:add_le(self.f.class_,  buffer(140, 2))
+      tree:add_le(self.f.str,     buffer(160, 2))
+      tree:add_le(self.f.sta,     buffer(162, 2))
+      tree:add_le(self.f.cha,     buffer(164, 2))
+      tree:add_le(self.f.dex,     buffer(166, 2))
+      tree:add_le(self.f.int_,    buffer(168, 2))
+      tree:add_le(self.f.agi,     buffer(170, 2))
+      tree:add_le(self.f.wis,     buffer(172, 2))
+      tree:add(self.f.oldface,    buffer(174, 1))
+      tree:add_le(self.f.zone_id, buffer(3440, 4))
+      tree:add_le(self.f.deity,   buffer(4940, 2))
+      tree:add(self.f.haircolor,  buffer(5422, 1))
+      tree:add(self.f.beardcolor, buffer(5423, 1))
+      tree:add(self.f.eyecolor1,  buffer(5424, 1))
+      tree:add(self.f.eyecolor2,  buffer(5425, 1))
+      tree:add(self.f.hairstyle,  buffer(5426, 1))
+      tree:add(self.f.beard,      buffer(5427, 1))
+      tree:add(self.f.luclinface, buffer(5428, 1))
+    end
   },
   [0x0741] = {
     name ="MSG_NEW_TEXT",
