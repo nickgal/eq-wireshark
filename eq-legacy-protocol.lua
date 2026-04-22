@@ -637,7 +637,11 @@ GAME_OPCODES = {
   [0xd841] = {
     name ="MSG_KUNARK",
     f = {
-      expansions = ProtoField.uint32("everquest.expansions.expansions", "Expansions"),
+      expansions = ProtoField.uint32("everquest.expansions.expansions", "Expansions", base.HEX),
+      classic    = ProtoField.bool("everquest.expansions.classic", "The Ruins of Kunark",      32, nil, 0x0001),
+      velious    = ProtoField.bool("everquest.expansions.velious", "The Scars of Velious",     32, nil, 0x0002),
+      luclin     = ProtoField.bool("everquest.expansions.luclin",  "The Shadows of Luclin",    32, nil, 0x0004),
+      pop        = ProtoField.bool("everquest.expansions.pop",     "Planes of Power",          32, nil, 0x0008),
     },
     dissect = function(self, tree, buffer)
       tree:add_le(self.f.expansions, buffer(0, 4))
