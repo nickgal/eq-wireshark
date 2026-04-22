@@ -1018,6 +1018,12 @@ GAME_OPCODES = {
   },
   [0x5a40] = {
     name ="MSG_DEL_PC",
+    f = {
+      name = ProtoField.string("everquest.del_pc.name", "Name"),
+    },
+    dissect = function(self, tree, buffer)
+      add_string(tree, self.f.name, buffer(0, buffer:len()))
+    end,
   },
   [0x2e41] = {
     name ="MSG_DEPOP_NPC",
