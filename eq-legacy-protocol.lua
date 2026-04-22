@@ -1135,6 +1135,12 @@ GAME_OPCODES = {
   },
   [0x3941] = {
     name ="MSG_EXEFILE_CHECK",
+    f = {
+      checksum = ProtoField.uint64("everquest.exefile_check.checksum", "Checksum", base.DEC),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add_le(self.f.checksum, buffer(0, 8))
+    end,
   },
   [0x9041] = {
     name ="MSG_EXPENDITEMCHARGE",
@@ -2291,6 +2297,12 @@ GAME_OPCODES = {
   },
   [0x3541] = {
     name ="MSG_SPELLFILE_CHECK",
+    f = {
+      checksum = ProtoField.uint64("everquest.spellfile_check.checksum", "Checksum", base.DEC),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add_le(self.f.checksum, buffer(0, 8))
+    end,
   },
   [0x4142] = {
     name ="MSG_SPELL_FIZZLE",
