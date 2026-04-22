@@ -1566,6 +1566,12 @@ GAME_OPCODES = {
   },
   [0x8c40] = {
     name ="MSG_NAME_APPROVE",
+    f = {
+      approval = ProtoField.bool("everquest.name_approve.approval", "Approved"),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add(self.f.approval, buffer(0, 1))
+    end,
   },
   [0xcc40] = {
     name ="MSG_NAME_CHANGED",
