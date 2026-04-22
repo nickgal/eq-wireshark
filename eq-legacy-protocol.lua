@@ -637,10 +637,18 @@ GAME_OPCODES = {
   [0xd841] = {
     name ="MSG_KUNARK",
     f = {
-      expansions = ProtoField.uint32("everquest.expansions.expansions", "Expansions"),
+      expansions = ProtoField.uint32("everquest.expansions.expansions", "Expansions", base.HEX),
+      classic    = ProtoField.bool("everquest.expansions.classic", "The Ruins of Kunark",      32, nil, 0x0001),
+      velious    = ProtoField.bool("everquest.expansions.velious", "The Scars of Velious",     32, nil, 0x0002),
+      luclin     = ProtoField.bool("everquest.expansions.luclin",  "The Shadows of Luclin",    32, nil, 0x0004),
+      pop        = ProtoField.bool("everquest.expansions.pop",     "Planes of Power",          32, nil, 0x0008),
     },
     dissect = function(self, tree, buffer)
-      tree:add_le(self.f.expansions, buffer(0, 4))
+      local subtree = tree:add_le(self.f.expansions, buffer(0, 4))
+      subtree:add_le(self.f.classic, buffer(0, 4))
+      subtree:add_le(self.f.velious, buffer(0, 4))
+      subtree:add_le(self.f.luclin,  buffer(0, 4))
+      subtree:add_le(self.f.pop,     buffer(0, 4))
     end,
   },
   [0xdd41] = {
@@ -1014,6 +1022,12 @@ GAME_OPCODES = {
   },
   [0x5a40] = {
     name ="MSG_DEL_PC",
+    f = {
+      name = ProtoField.string("everquest.del_pc.name", "Name"),
+    },
+    dissect = function(self, tree, buffer)
+      add_string(tree, self.f.name, buffer(0, buffer:len()))
+    end,
   },
   [0x2e41] = {
     name ="MSG_DEPOP_NPC",
@@ -1125,6 +1139,12 @@ GAME_OPCODES = {
   },
   [0x3941] = {
     name ="MSG_EXEFILE_CHECK",
+    f = {
+      checksum = ProtoField.uint64("everquest.exefile_check.checksum", "Checksum", base.DEC),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add_le(self.f.checksum, buffer(0, 8))
+    end,
   },
   [0x9041] = {
     name ="MSG_EXPENDITEMCHARGE",
@@ -1524,6 +1544,20 @@ GAME_OPCODES = {
   },
   [0x9240] = {
     name ="MSG_MATERIAL_SWAP",
+    f = {
+      spawn_id    = ProtoField.uint16("everquest.material_swap.spawn_id",    "Spawn ID"),
+      wear_slot   = ProtoField.uint8 ("everquest.material_swap.wear_slot",   "Wear Slot"),
+      material    = ProtoField.uint16("everquest.material_swap.material",    "Material"),
+      color       = ProtoField.uint32("everquest.material_swap.color",       "Color", base.HEX),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add_le(self.f.spawn_id,  buffer(0, 2))
+      tree:add   (self.f.wear_slot, buffer(2, 1))
+      -- byte 3: alignment padding
+      tree:add_le(self.f.material,  buffer(4, 2))
+      -- bytes 6-7: alignment padding
+      tree:add_le(self.f.color,     buffer(8, 4))
+    end,
   },
   [0x9d41] = {
     name ="MSG_MEND",
@@ -1566,15 +1600,84 @@ GAME_OPCODES = {
   },
   [0x8c40] = {
     name ="MSG_NAME_APPROVE",
+    f = {
+      approval = ProtoField.bool("everquest.name_approve.approval", "Approved"),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add(self.f.approval, buffer(0, 1))
+    end,
   },
   [0xcc40] = {
     name ="MSG_NAME_CHANGED",
   },
   [0x8b40] = {
     name ="MSG_NAME_SUBMIT",
+    f = {
+      name     = ProtoField.string("everquest.name_submit.name", "Name"),
+      race     = ProtoField.uint32("everquest.name_submit.race", "Race"),
+      class_   = ProtoField.uint32("everquest.name_submit.class", "Class"),
+      deity    = ProtoField.uint32("everquest.name_submit.deity", "Deity"),
+      approval = ProtoField.bool("everquest.name_submit.approval", "Approved"),
+    },
+    dissect = function(self, tree, buffer)
+      if buffer:len() == 1 then
+        tree:add(self.f.approval, buffer(0, 1))
+      else
+        add_string(tree, self.f.name, buffer(0, 64))
+        tree:add_le(self.f.race, buffer(64, 4))
+        tree:add_le(self.f.class_, buffer(68, 4))
+        tree:add_le(self.f.deity, buffer(72, 4))
+      end
+    end,
   },
   [0x4940] = {
     name ="MSG_NEW_PC",
+    f = {
+      name       = ProtoField.string("everquest.new_pc.name", "Name"),
+      gender     = ProtoField.uint8("everquest.new_pc.gender", "Gender"),
+      race       = ProtoField.uint16("everquest.new_pc.race", "Race"),
+      class_     = ProtoField.uint16("everquest.new_pc.class", "Class"),
+      str        = ProtoField.int16("everquest.new_pc.str", "STR"),
+      sta        = ProtoField.int16("everquest.new_pc.sta", "STA"),
+      cha        = ProtoField.int16("everquest.new_pc.cha", "CHA"),
+      dex        = ProtoField.int16("everquest.new_pc.dex", "DEX"),
+      int_       = ProtoField.int16("everquest.new_pc.int", "INT"),
+      agi        = ProtoField.int16("everquest.new_pc.agi", "AGI"),
+      wis        = ProtoField.int16("everquest.new_pc.wis", "WIS"),
+      zone_id    = ProtoField.uint32("everquest.new_pc.zone_id", "Starting Zone"),
+      deity      = ProtoField.uint16("everquest.new_pc.deity", "Deity"),
+      oldface    = ProtoField.uint8("everquest.new_pc.oldface", "Face (old)"),
+      haircolor  = ProtoField.uint8("everquest.new_pc.haircolor", "Hair Color"),
+      beardcolor = ProtoField.uint8("everquest.new_pc.beardcolor", "Beard Color"),
+      eyecolor1  = ProtoField.uint8("everquest.new_pc.eyecolor1", "Eye Color 1"),
+      eyecolor2  = ProtoField.uint8("everquest.new_pc.eyecolor2", "Eye Color 2"),
+      hairstyle  = ProtoField.uint8("everquest.new_pc.hairstyle", "Hairstyle"),
+      beard      = ProtoField.uint8("everquest.new_pc.beard", "Beard"),
+      luclinface = ProtoField.uint8("everquest.new_pc.luclinface", "Face"),
+    },
+    dissect = function(self, tree, buffer)
+      add_string(tree, self.f.name, buffer(2, 64))
+      tree:add(self.f.gender,     buffer(136, 1))
+      tree:add_le(self.f.race,    buffer(138, 2))
+      tree:add_le(self.f.class_,  buffer(140, 2))
+      tree:add_le(self.f.str,     buffer(160, 2))
+      tree:add_le(self.f.sta,     buffer(162, 2))
+      tree:add_le(self.f.cha,     buffer(164, 2))
+      tree:add_le(self.f.dex,     buffer(166, 2))
+      tree:add_le(self.f.int_,    buffer(168, 2))
+      tree:add_le(self.f.agi,     buffer(170, 2))
+      tree:add_le(self.f.wis,     buffer(172, 2))
+      tree:add(self.f.oldface,    buffer(174, 1))
+      tree:add_le(self.f.zone_id, buffer(3440, 4))
+      tree:add_le(self.f.deity,   buffer(4940, 2))
+      tree:add(self.f.haircolor,  buffer(5422, 1))
+      tree:add(self.f.beardcolor, buffer(5423, 1))
+      tree:add(self.f.eyecolor1,  buffer(5424, 1))
+      tree:add(self.f.eyecolor2,  buffer(5425, 1))
+      tree:add(self.f.hairstyle,  buffer(5426, 1))
+      tree:add(self.f.beard,      buffer(5427, 1))
+      tree:add(self.f.luclinface, buffer(5428, 1))
+    end
   },
   [0x0741] = {
     name ="MSG_NEW_TEXT",
@@ -2244,6 +2347,12 @@ GAME_OPCODES = {
   },
   [0x3541] = {
     name ="MSG_SPELLFILE_CHECK",
+    f = {
+      checksum = ProtoField.uint64("everquest.spellfile_check.checksum", "Checksum", base.DEC),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add_le(self.f.checksum, buffer(0, 8))
+    end,
   },
   [0x4142] = {
     name ="MSG_SPELL_FIZZLE",
