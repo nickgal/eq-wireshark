@@ -1665,6 +1665,16 @@ GAME_OPCODES = {
   },
   [0x2c41] = {
     name ="MSG_MOVE_ITEM",
+    f = {
+      from = ProtoField.int32("everquest.move_item.from", "From Slot"),
+      to = ProtoField.int32("everquest.move_item.to", "To Slot"),
+      qty = ProtoField.int32("everquest.move_item.qty", "Quantity"),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add_le(self.f.from, buffer(0, 4))
+      tree:add_le(self.f.to, buffer(4, 4))
+      tree:add_le(self.f.qty, buffer(8, 4))
+    end
   },
   [0x2d41] = {
     name ="MSG_MOVE_MONEY",
