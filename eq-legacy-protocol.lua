@@ -668,6 +668,35 @@ GAME_OPCODES = {
   },
   [0x2c40] = {
     name ="MSG_ADD_ILIST",
+    f = {
+      recordnum = ProtoField.int16("everquest.add_ilist.record_num", "Record Number"),
+      serialnum = ProtoField.int32("everquest.add_ilist.serial_num", "Serial Number"),
+      expires = ProtoField.int32("everquest.add_ilist.expires", "Expires"),
+      heading = ProtoField.float("everquest.add_ilist.heading", "Heading"),
+      x = ProtoField.float("everquest.add_ilist.x", "X"),
+      y = ProtoField.float("everquest.add_ilist.y", "Y"),
+      z = ProtoField.float("everquest.add_ilist.z", "Z"),
+      actor_tag = ProtoField.string("everquest.add_ilist.actor_tag", "Actor Tag"),
+
+      -- TODO: All 10 of these shorts
+      -- items_held = ProtoField.int16("everquest.add_ilist.", "Type"),
+
+      key = ProtoField.int16("everquest.add_ilist.key", "Key"),
+      locked = ProtoField.uint32("everquest.add_ilist.locked", "Locked"),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add_le(self.f.recordnum, buffer(8, 2))
+      tree:add_le(self.f.serialnum, buffer(12, 4))
+      tree:add_le(self.f.expires, buffer(136, 4))
+      tree:add_le(self.f.heading, buffer(140, 4))
+      tree:add_le(self.f.z, buffer(144, 4))
+      tree:add_le(self.f.y, buffer(148, 4))
+      tree:add_le(self.f.z, buffer(152, 4))
+      tree:add(self.f.actor_tag, buffer(156, 30))
+      tree:add_le(self.f.key, buffer(216, 2))
+      -- This throws an error if you make it buffer(220, 4)
+      tree:add_le(self.f.locked, buffer(220, 2))
+    end,
   },
   [0xed40] = {
     name ="MSG_ADD_LINK",
