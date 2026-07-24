@@ -909,6 +909,22 @@ GAME_OPCODES = {
   },
   [0xd740] = {
     name ="MSG_CHEST_LOCK",
+    f = {
+      id = ProtoField.uint16("everquest.chest_lock.id", "ID"),
+      serialnum = ProtoField.uint32("everquest.chest_lock.serial_num", "Serial Number"),
+      status = ProtoField.int16("everquest.chest_lock.status", "Status"),
+      type = ProtoField.int16("everquest.chest_lock.type", "Type"),
+      capacity = ProtoField.int32("everquest.chest_lock.capacity", "Capacity"),
+      imagenum = ProtoField.int32("everquest.chest_lock.image_num", "Image Number"),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add_le(self.f.id, buffer(0, 2))
+      tree:add_le(self.f.serialnum, buffer(4, 4))
+      tree:add_le(self.f.status, buffer(8, 2))
+      tree:add_le(self.f.type, buffer(10, 2))
+      tree:add_le(self.f.capacity, buffer(12, 4))
+      tree:add_le(self.f.imagenum, buffer(16, 4))
+    end,
   },
   [0x4e41] = {
     name ="MSG_CLEAR_FACTIONTABLE",
