@@ -727,6 +727,35 @@ GAME_OPCODES = {
   },
   [0x0541] = {
     name ="MSG_ALCHEMY",
+    f = {
+      type = ProtoField.uint8("everquest.do_combine.type", "Type"),
+      skill = ProtoField.int16("everquest.do_combine.skill", "Skill"),
+      location = ProtoField.int16("everquest.do_combine.location", "Location"),
+      item1 = ProtoField.int16("everquest.do_combine.item1", "Item 1"),
+      item2 = ProtoField.int16("everquest.do_combine.item2", "Item 2"),
+      item3 = ProtoField.int16("everquest.do_combine.item3", "Item 3"),
+      item4 = ProtoField.int16("everquest.do_combine.item4", "Item 4"),
+      item5 = ProtoField.int16("everquest.do_combine.item5", "Item 5"),
+      item6 = ProtoField.int16("everquest.do_combine.item6", "Item 6"),
+      item7 = ProtoField.int16("everquest.do_combine.item7", "Item 7"),
+      item8 = ProtoField.int16("everquest.do_combine.item8", "Item 8"),
+      item9 = ProtoField.int16("everquest.do_combine.item9", "Item 9"),
+      item10 = ProtoField.int16("everquest.do_combine.item10", "Item 10"),
+      product = ProtoField.int16("everquest.do_combine.product", "Product"),
+      difficulty = ProtoField.int16("everquest.do_combine.difficulty", "Difficulty"),
+      itemrefnum = ProtoField.int16("everquest.do_combine.item_ref_num", "Item Ref Num"),
+    },
+    dissect = function(self, tree, buffer)
+      tree:add(self.f.type, buffer(0, 1))
+      tree:add_le(self.f.skill, buffer(2, 2))
+      tree:add_le(self.f.location, buffer(4, 2))
+      for i = 1, 10, 1 do
+        tree:add_le(self.f["item" .. i], buffer(4 + (i * 2), 2))
+      end
+      tree:add_le(self.f.product, buffer(26, 2))
+      tree:add_le(self.f.difficulty, buffer(28, 2))
+      tree:add_le(self.f.itemrefnum, buffer(30, 2))
+    end,
   },
   [0x0b10] = {
     name ="MSG_ALIVE",
